@@ -23,11 +23,25 @@ public class Bola {
         if (Math.abs(velX) < 0.1) velX = 0;
         if (Math.abs(velY) < 0.1) velY = 0;
 
-        // Colisões com paredes (quicar com perda de energia)
-        if (y <= 60) { y = 60; velY = -velY * 0.8; }
-        if (y >= 600 - tamanho) { y = 600 - tamanho; velY = -velY * 0.8; }
-        if (x <= 10) { x = 10; velX = -velX * 0.8; }
-        if (x >= 775 - tamanho) { x = 775 - tamanho; velX = -velX * 0.8; }
+        // --- SISTEMA ABSOLUTO ANTI-SAÍDA DO MAPA ---
+
+        // Colisões com o topo (Chão / Teto)
+        if (y <= 60) {
+            y = 60;
+            velY = -velY * 0.7; // Reduzido levemente o coeficiente para absorver o impacto de prensadas
+        } else if (y >= 600 - tamanho) {
+            y = 600 - tamanho;
+            velY = -velY * 0.7;
+        }
+
+        // Colisões com as laterais (Paredes do Fundo e Traves)
+        if (x <= 10) {
+            x = 10;
+            velX = -velX * 0.7;
+        } else if (x >= 775 - tamanho) {
+            x = 775 - tamanho;
+            velX = -velX * 0.7;
+        }
     }
 
     public Rectangle getLimites() {

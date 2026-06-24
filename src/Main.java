@@ -19,7 +19,7 @@ public class Main extends JFrame {
     private int raioAuraBot = 0;
     private int cooldownChuteBot = 0;
 
-    private int velocidadSeuJogador = 4;
+    private int velocidadeSeuJogador = 4;
     private int velocidadeGoleiro = 3;
     private int velocidadeLinhaDireita = 3;
 
@@ -67,41 +67,91 @@ public class Main extends JFrame {
                 bola.mexer();
                 aplicarFisicaCurvaCenario();
 
+                // --- SISTEMA ANTI-TRAVAMENTO REFORÇADO (ZONA DE EJEÇÃO DOS CANTOS) ---
+                // Se a bola estiver muito próxima das quinas extremas do campo, força um empurrão para o centro
+                if (bola.x < 50 && bola.y < 100) { // Canto Superior Esquerdo
+                    bola.velX += 0.8;
+                    bola.velY += 0.8;
+                } else if (bola.x < 50 && bola.y > 540) { // Canto Inferior Esquerdo
+                    bola.velX += 0.8;
+                    bola.velY -= 0.8;
+                } else if (bola.x > 720 && bola.y < 100) { // Canto Superior Direita
+                    bola.velX -= 0.8;
+                    bola.velY += 0.8;
+                } else if (bola.x > 720 && bola.y > 540) { // Canto Inferior Direita
+                    bola.velX -= 0.8;
+                    bola.velY -= 0.8;
+                }
+
                 if (cooldownChuteBot > 0) cooldownChuteBot--;
 
                 // --- MOVIMENTAÇÃO PLAYER ---
                 int oldX = cenario.linhaEsquerda.x;
                 int oldY = cenario.linhaEsquerda.y;
 
-                if (teclaW) cenario.linhaEsquerda.y -= velocidadSeuJogador;
-                if (teclaS) cenario.linhaEsquerda.y += velocidadSeuJogador;
-                if (teclaA) cenario.linhaEsquerda.x -= velocidadSeuJogador;
-                if (teclaD) cenario.linhaEsquerda.x += velocidadSeuJogador;
+                if (teclaW) cenario.linhaEsquerda.y -= velocidadeSeuJogador;
+                if (teclaS) cenario.linhaEsquerda.y += velocidadeSeuJogador;
+                if (teclaA) cenario.linhaEsquerda.x -= velocidadeSeuJogador;
+                if (teclaD) cenario.linhaEsquerda.x += velocidadeSeuJogador;
 
                 if (estaForaDoCampo(cenario.linhaEsquerda) || isNaAreaProibida(cenario.linhaEsquerda)) {
                     cenario.linhaEsquerda.x = oldX;
                     cenario.linhaEsquerda.y = oldY;
                 }
 
-                // --- GOLEIRO ESQUERDA INTELIGENTE ---
-                if (bola.y > cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y < 420) cenario.goleiroEsquerda.y += velocidadeGoleiro;
-                else if (bola.y < cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y > 195) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
-
-                if (bola.x < 150) {
-                    if (cenario.goleiroEsquerda.x < 80) cenario.goleiroEsquerda.x += 2;
-                } else {
-                    if (cenario.goleiroEsquerda.x > 30) cenario.goleiroEsquerda.x -= 2;
+                // ANTI-PRISÃO PLAYER: Se forçado para dentro da área, ejeta para fora
+                if (isNaAreaProibida(cenario.linhaEsquerda)) {
+                    if (cenario.linhaEsquerda.x < 400) {
+                        cenario.linhaEsquerda.x = 105;
+                    } else {
+                        cenario.linhaEsquerda.x = 680 - cenario.linhaEsquerda.largura;
+                    }
                 }
 
-                // --- GOLEIRO DIREITA INTELIGENTE ---
-                if (bola.y > cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y < 420) cenario.goleiroDireita.y += velocidadeGoleiro;
-                else if (bola.y < cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y > 195) cenario.goleiroDireita.y -= velocidadeGoleiro;
+                // --- INTELIGÊNCIA DO GOLEIRO ESQUERDA ---
+                boolean bolaNaAreaEsq = (bola.x >= 10 && bola.x <= 100 && bola.y >= 195 && bola.y <= 465);
 
-                if (bola.x > 650) {
-                    if (cenario.goleiroDireita.x > 690) cenario.goleiroDireita.x -= 2;
+                if (bolaNaAreaEsq) {
+                    if (cenario.goleiroEsquerda.x < bola.x) cenario.goleiroEsquerda.x += velocidadeGoleiro;
+                    if (cenario.goleiroEsquerda.x > bola.x) cenario.goleiroEsquerda.x -= velocidadeGoleiro;
+
+                    if (bola.y > cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y += velocidadeGoleiro;
+                    else if (bola.y < cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
                 } else {
-                    if (cenario.goleiroDireita.x < 740) cenario.goleiroDireita.x += 2;
+                    if (bola.y > cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y < 420) cenario.goleiroEsquerda.y += velocidadeGoleiro;
+                    else if (bola.y < cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y > 195) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
+
+                    if (bola.x > 250) {
+                        if (cenario.goleiroEsquerda.x < 80) cenario.goleiroEsquerda.x += 2;
+                    } else {
+                        if (cenario.goleiroEsquerda.x > 30) cenario.goleiroEsquerda.x -= 2;
+                    }
                 }
+
+                // --- INTELIGÊNCIA DO GOLEIRO DIREITA ---
+                boolean bolaNaAreaDir = (bola.x >= 685 && bola.x <= 775 && bola.y >= 195 && bola.y <= 465);
+
+                if (bolaNaAreaDir) {
+                    if (cenario.goleiroDireita.x < bola.x) cenario.goleiroDireita.x += velocidadeGoleiro;
+                    if (cenario.goleiroDireita.x > bola.x) cenario.goleiroDireita.x -= velocidadeGoleiro;
+
+                    if (bola.y > cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y += velocidadeGoleiro;
+                    else if (bola.y < cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y -= velocidadeGoleiro;
+                } else {
+                    if (bola.y > cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y < 420) cenario.goleiroDireita.y += velocidadeGoleiro;
+                    else if (bola.y < cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y > 195) cenario.goleiroDireita.y -= velocidadeGoleiro;
+
+                    if (bola.x < 550) {
+                        if (cenario.goleiroDireita.x > 690) cenario.goleiroDireita.x -= 2;
+                    } else {
+                        if (cenario.goleiroDireita.x < 740) cenario.goleiroDireita.x += 2;
+                    }
+                }
+
+                if (cenario.goleiroEsquerda.x < 10) cenario.goleiroEsquerda.x = 10;
+                if (cenario.goleiroEsquerda.x > 100) cenario.goleiroEsquerda.x = 100;
+                if (cenario.goleiroDireita.x < 685) cenario.goleiroDireita.x = 685;
+                if (cenario.goleiroDireita.x > 775) cenario.goleiroDireita.x = 775;
 
                 // --- BOT MOVIMENTO INTELIGENTE ---
                 int oldBotX = cenario.linhaDireita.x;
@@ -127,10 +177,24 @@ public class Main extends JFrame {
                 Jogador tentY = new Jogador(cenario.linhaDireita.x, destinoY, "direita");
                 if (!estaForaDoCampo(tentY) && !isNaAreaProibida(tentY)) cenario.linhaDireita.y = destinoY;
 
-                // --- INTELIGÊNCIA DE CHUTE DO BOT ---
+                if (isNaAreaProibida(cenario.linhaDireita)) {
+                    if (cenario.linhaDireita.x > 400) {
+                        cenario.linhaDireita.x = 680 - cenario.linhaDireita.largura;
+                    } else {
+                        cenario.linhaDireita.x = 105;
+                    }
+                }
+
+                // --- INTELIGÊNCIA DE CHUTE DO BOT COM PROTEÇÃO DE CANTO ---
                 double distBotBola = Math.hypot(cenario.linhaDireita.x - bola.x, cenario.linhaDireita.y - bola.y);
                 double distBotPlayer = Math.hypot(cenario.linhaDireita.x - cenario.linhaEsquerda.x, cenario.linhaDireita.y - cenario.linhaEsquerda.y);
-                boolean bolaNoCanto = (bola.x < 35 || bola.x > 745 || bola.y < 85 || bola.y > 575);
+
+                boolean bolaNoCanto = (bola.x < 45 || bola.x > 735 || bola.y < 95 || bola.y > 565);
+
+                if (bolaNoCanto && distBotBola < 60) {
+                    bola.velX = (bola.x < 400) ? 5.0 : -5.0;
+                    bola.velY = (bola.y < 300) ? 4.5 : -4.5;
+                }
 
                 if (cooldownChuteBot == 0 && !botChutando && !bolaNoCanto) {
                     if (distBotBola < 55 || distBotPlayer < 75) {
@@ -185,7 +249,6 @@ public class Main extends JFrame {
         timer.start();
     }
 
-    // --- FÍSICA CURVA DA BOLA ---
     private void aplicarFisicaCurvaCenario() {
         int raioCurva = 50;
         double centroBolaX = bola.x + bola.tamanho / 2.0;
@@ -283,20 +346,16 @@ public class Main extends JFrame {
         return rectJogador.intersects(areaEsquerda) || rectJogador.intersects(areaDireita);
     }
 
-    // --- COLISÃO CURVA DOS JOGADORES ---
     private boolean estaForaDoCampo(Jogador j) {
-        // 1. Limite retangular padrão
         if (j.x < 10 || j.x > (775 - j.largura) || j.y < 60 || j.y > (600 - j.altura)) {
             return true;
         }
 
-        // 2. Deslizar jogador pelos arcos das quinas curvas
         int raioCurva = 50;
         double centroJogadorX = j.x + j.largura / 2.0;
         double centroJogadorY = j.y + j.altura / 2.0;
         double limiteColisao = raioCurva - (j.largura / 2.0);
 
-        // Quina Superior Esquerda
         if (centroJogadorX < 10 + raioCurva && centroJogadorY < 60 + raioCurva) {
             double dx = centroJogadorX - (10 + raioCurva);
             double dy = centroJogadorY - (60 + raioCurva);
@@ -304,7 +363,6 @@ public class Main extends JFrame {
                 ajustarJogadorNaCurva(j, 10 + raioCurva, 60 + raioCurva, limiteColisao);
             }
         }
-        // Quina Inferior Esquerda
         else if (centroJogadorX < 10 + raioCurva && centroJogadorY > 600 - raioCurva) {
             double dx = centroJogadorX - (10 + raioCurva);
             double dy = centroJogadorY - (600 - raioCurva);
@@ -312,7 +370,6 @@ public class Main extends JFrame {
                 ajustarJogadorNaCurva(j, 10 + raioCurva, 600 - raioCurva, limiteColisao);
             }
         }
-        // Quina Superior Direito
         else if (centroJogadorX > 775 - raioCurva && centroJogadorY < 60 + raioCurva) {
             double dx = centroJogadorX - (775 - raioCurva);
             double dy = centroJogadorY - (60 + raioCurva);
@@ -320,7 +377,6 @@ public class Main extends JFrame {
                 ajustarJogadorNaCurva(j, 775 - raioCurva, 60 + raioCurva, limiteColisao);
             }
         }
-        // Quina Inferior Direito
         else if (centroJogadorX > 775 - raioCurva && centroJogadorY > 600 - raioCurva) {
             double dx = centroJogadorX - (775 - raioCurva);
             double dy = centroJogadorY - (600 - raioCurva);
@@ -354,8 +410,36 @@ public class Main extends JFrame {
             double centroJogadorX = j.x + (j.largura / 2.0);
             double centroJogadorY = j.y + (j.altura / 2.0);
 
-            b.velX = (centroBolaX - centroJogadorX) * 0.28 * multiplicador;
-            b.velY = (centroBolaY - centroJogadorY) * 0.28 * multiplicador;
+            double dx = centroBolaX - centroJogadorX;
+            double dy = centroBolaY - centroJogadorY;
+            double distancia = Math.hypot(dx, dy);
+
+            if (distancia == 0) {
+                dx = 1;
+                dy = 1;
+                distancia = Math.hypot(dx, dy);
+            }
+
+            b.velX = (dx / distancia) * 4.5 * multiplicador;
+            b.velY = (dy / distancia) * 4.5 * multiplicador;
+
+            if (b.x < 45 || b.x > 735) {
+                b.velY += (b.velY >= 0) ? 2.5 : -2.5;
+            }
+            if (b.y < 90 || b.y > 570) {
+                b.velX += (b.velX >= 0) ? 2.5 : -2.5;
+            }
+
+            double sobreposicaoX = (j.largura / 2.0 + b.tamanho / 2.0) - Math.abs(dx);
+            double sobreposicaoY = (j.altura / 2.0 + b.tamanho / 2.0) - Math.abs(dy);
+
+            if (sobreposicaoX > 0 && sobreposicaoY > 0) {
+                if (sobreposicaoX < sobreposicaoY) {
+                    b.x += (dx > 0) ? sobreposicaoX : -sobreposicaoX;
+                } else {
+                    b.y += (dy > 0) ? sobreposicaoY : -sobreposicaoY;
+                }
+            }
         }
     }
 
