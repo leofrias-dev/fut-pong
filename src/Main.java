@@ -65,6 +65,7 @@ public class Main extends JFrame {
         timer = new Timer(16, e -> {
             if (cenario.jogoRodando()) {
                 bola.mexer();
+                aplicarFisicaCurvaCenario();
 
                 if (cooldownChuteBot > 0) cooldownChuteBot--;
 
@@ -82,7 +83,7 @@ public class Main extends JFrame {
                     cenario.linhaEsquerda.y = oldY;
                 }
 
-                // --- GOLEIRO ESQUERDA INTELIGENTE (X e Y) ---
+                // --- GOLEIRO ESQUERDA INTELIGENTE ---
                 if (bola.y > cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y < 420) cenario.goleiroEsquerda.y += velocidadeGoleiro;
                 else if (bola.y < cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y > 195) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
 
@@ -92,7 +93,7 @@ public class Main extends JFrame {
                     if (cenario.goleiroEsquerda.x > 30) cenario.goleiroEsquerda.x -= 2;
                 }
 
-                // --- GOLEIRO DIREITA INTELIGENTE (X e Y) ---
+                // --- GOLEIRO DIREITA INTELIGENTE ---
                 if (bola.y > cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y < 420) cenario.goleiroDireita.y += velocidadeGoleiro;
                 else if (bola.y < cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y > 195) cenario.goleiroDireita.y -= velocidadeGoleiro;
 
@@ -150,7 +151,7 @@ public class Main extends JFrame {
                     }
                 }
 
-                // --- CONDUÇÃO SUAVE ---
+                // --- CONDUÇÃO ---
                 if (!pisaAtivo) aplicarColisaoFisica(cenario.linhaEsquerda, bola, 1.0);
                 aplicarColisaoFisica(cenario.goleiroEsquerda, bola, 1.1);
                 aplicarColisaoFisica(cenario.goleiroDireita, bola, 1.1);
@@ -184,7 +185,45 @@ public class Main extends JFrame {
         timer.start();
     }
 
-    // --- AQUI ESTÁ O MÉTODO QUE ESTAVA FALTANDO ---
+    // --- FÍSICA CURVA DA BOLA ---
+    private void aplicarFisicaCurvaCenario() {
+        int raioCurva = 50;
+        double centroBolaX = bola.x + bola.tamanho / 2.0;
+        double centroBolaY = bola.y + bola.tamanho / 2.0;
+
+        verificarCantoRedondo(centroBolaX, centroBolaY, 10 + raioCurva, 60 + raioCurva, raioCurva, "sup_esq");
+        verificarCantoRedondo(centroBolaX, centroBolaY, 10 + raioCurva, 600 - raioCurva, raioCurva, "inf_esq");
+        verificarCantoRedondo(centroBolaX, centroBolaY, 775 - raioCurva, 60 + raioCurva, raioCurva, "sup_dir");
+        verificarCantoRedondo(centroBolaX, centroBolaY, 775 - raioCurva, 600 - raioCurva, raioCurva, "inf_dir");
+    }
+
+    private void verificarCantoRedondo(double bx, double by, double cx, double cy, double raio, String canto) {
+        double dx = bx - cx;
+        double dy = by - cy;
+        double distanciaDoCentroDaCurva = Math.hypot(dx, dy);
+        double limiteColisao = raio - (bola.tamanho / 2.0);
+
+        if (distanciaDoCentroDaCurva > limiteColisao) {
+            boolean naAreaDoCanto = false;
+            if (canto.equals("sup_esq") && dx < 0 && dy < 0) naAreaDoCanto = true;
+            if (canto.equals("inf_esq") && dx < 0 && dy > 0) naAreaDoCanto = true;
+            if (canto.equals("sup_dir") && dx > 0 && dy < 0) naAreaDoCanto = true;
+            if (canto.equals("inf_dir") && dx > 0 && dy > 0) naAreaDoCanto = true;
+
+            if (naAreaDoCanto) {
+                double angulo = Math.atan2(dy, dx);
+                bola.x = (cx + Math.cos(angulo) * limiteColisao) - (bola.tamanho / 2.0);
+                bola.y = (cy + Math.sin(angulo) * limiteColisao) - (bola.tamanho / 2.0);
+
+                double dotProduct = bola.velX * Math.cos(angulo) + bola.velY * Math.sin(angulo);
+                if (dotProduct > 0) {
+                    bola.velX = (bola.velX - 2 * dotProduct * Math.cos(angulo)) * 0.8;
+                    bola.velY = (bola.velY - 2 * dotProduct * Math.sin(angulo)) * 0.8;
+                }
+            }
+        }
+    }
+
     private void executarChutePlayer() {
         double forcaImpacto = 16.0;
         double dxBola = bola.x - cenario.linhaEsquerda.x;
@@ -244,8 +283,65 @@ public class Main extends JFrame {
         return rectJogador.intersects(areaEsquerda) || rectJogador.intersects(areaDireita);
     }
 
+    // --- COLISÃO CURVA DOS JOGADORES ---
     private boolean estaForaDoCampo(Jogador j) {
-        return (j.x < 10 || j.x > (775 - j.largura) || j.y < 60 || j.y > (600 - j.altura));
+        // 1. Limite retangular padrão
+        if (j.x < 10 || j.x > (775 - j.largura) || j.y < 60 || j.y > (600 - j.altura)) {
+            return true;
+        }
+
+        // 2. Deslizar jogador pelos arcos das quinas curvas
+        int raioCurva = 50;
+        double centroJogadorX = j.x + j.largura / 2.0;
+        double centroJogadorY = j.y + j.altura / 2.0;
+        double limiteColisao = raioCurva - (j.largura / 2.0);
+
+        // Quina Superior Esquerda
+        if (centroJogadorX < 10 + raioCurva && centroJogadorY < 60 + raioCurva) {
+            double dx = centroJogadorX - (10 + raioCurva);
+            double dy = centroJogadorY - (60 + raioCurva);
+            if (Math.hypot(dx, dy) > limiteColisao) {
+                ajustarJogadorNaCurva(j, 10 + raioCurva, 60 + raioCurva, limiteColisao);
+            }
+        }
+        // Quina Inferior Esquerda
+        else if (centroJogadorX < 10 + raioCurva && centroJogadorY > 600 - raioCurva) {
+            double dx = centroJogadorX - (10 + raioCurva);
+            double dy = centroJogadorY - (600 - raioCurva);
+            if (Math.hypot(dx, dy) > limiteColisao) {
+                ajustarJogadorNaCurva(j, 10 + raioCurva, 600 - raioCurva, limiteColisao);
+            }
+        }
+        // Quina Superior Direito
+        else if (centroJogadorX > 775 - raioCurva && centroJogadorY < 60 + raioCurva) {
+            double dx = centroJogadorX - (775 - raioCurva);
+            double dy = centroJogadorY - (60 + raioCurva);
+            if (Math.hypot(dx, dy) > limiteColisao) {
+                ajustarJogadorNaCurva(j, 775 - raioCurva, 60 + raioCurva, limiteColisao);
+            }
+        }
+        // Quina Inferior Direito
+        else if (centroJogadorX > 775 - raioCurva && centroJogadorY > 600 - raioCurva) {
+            double dx = centroJogadorX - (775 - raioCurva);
+            double dy = centroJogadorY - (600 - raioCurva);
+            if (Math.hypot(dx, dy) > limiteColisao) {
+                ajustarJogadorNaCurva(j, 775 - raioCurva, 600 - raioCurva, limiteColisao);
+            }
+        }
+
+        return false;
+    }
+
+    private void ajustarJogadorNaCurva(Jogador j, double cx, double cy, double limite) {
+        double centroJogadorX = j.x + j.largura / 2.0;
+        double centroJogadorY = j.y + j.altura / 2.0;
+
+        double dx = centroJogadorX - cx;
+        double dy = centroJogadorY - cy;
+        double angulo = Math.atan2(dy, dx);
+
+        j.x = (int) ((cx + Math.cos(angulo) * limite) - (j.largura / 2.0));
+        j.y = (int) ((cy + Math.sin(angulo) * limite) - (j.altura / 2.0));
     }
 
     private void aplicarColisaoFisica(Jogador j, Bola b, double multiplicador) {

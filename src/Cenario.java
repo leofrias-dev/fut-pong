@@ -73,6 +73,7 @@ public class Cenario extends JPanel {
         this.desenharAuraBot = ativo;
     }
 
+    // Corrigido aqui!
     public boolean jogoRodando() { return emPartida; }
 
     public void verificarGol() {
@@ -118,7 +119,26 @@ public class Cenario extends JPanel {
         }
 
         g2d.setColor(Color.WHITE);
-        g2d.drawRect(10, 60, 765, 540);
+
+        int raioCurva = 50;
+
+        // Linhas retas
+        g2d.drawLine(10 + raioCurva, 60, 775 - raioCurva, 60);
+        g2d.drawLine(10 + raioCurva, 600, 775 - raioCurva, 600);
+
+        g2d.drawLine(10, 60 + raioCurva, 10, 270);
+        g2d.drawLine(10, 390, 10, 600 - raioCurva);
+
+        g2d.drawLine(775, 60 + raioCurva, 775, 270);
+        g2d.drawLine(775, 390, 775, 600 - raioCurva);
+
+        // Arcos das quinas curvas
+        g2d.drawArc(10, 60, raioCurva * 2, raioCurva * 2, 90, 90);
+        g2d.drawArc(10, 600 - (raioCurva * 2), raioCurva * 2, raioCurva * 2, 180, 90);
+        g2d.drawArc(775 - (raioCurva * 2), 60, raioCurva * 2, raioCurva * 2, 0, 90);
+        g2d.drawArc(775 - (raioCurva * 2), 600 - (raioCurva * 2), raioCurva * 2, raioCurva * 2, 270, 90);
+
+        // Meio de campo e áreas
         g2d.drawLine(392, 60, 392, 600);
         g2d.drawOval(342, 280, 100, 100);
         g2d.drawRect(10, 195, 90, 270);
@@ -151,45 +171,36 @@ public class Cenario extends JPanel {
 
         Jogador[] todosJogadores = {goleiroEsquerda, linhaEsquerda, goleiroDireita, linhaDireita};
         for (Jogador j : todosJogadores) {
-
-            // Salva o estado atual do canvas para rotacionar apenas esse boneco
             AffineTransform oldTransform = g2d.getTransform();
 
-            // Centro do jogador para rotação
             int centroX = j.x + (j.largura / 2);
             int centroY = j.y + (j.altura / 2);
 
-            // Calcula o ângulo olhando para a bola
             double dx = (bola.x + bola.tamanho/2.0) - centroX;
             double dy = (bola.y + bola.tamanho/2.0) - centroY;
             double angulo = Math.atan2(dy, dx);
 
             g2d.translate(centroX, centroY);
 
-            // Se for goleiro, ele vira o corpo (mira a bola!). Se for jogador de linha, mantém o padrão do seu lado.
             if (j == goleiroEsquerda || j == goleiroDireita) {
                 g2d.rotate(angulo);
             } else {
                 g2d.rotate(j.lado.equals("esquerda") ? 0 : Math.PI);
             }
 
-            // Desenha o corpo (Centralizado no 0,0 local)
             g2d.setColor(Color.LIGHT_GRAY);
             g2d.fillOval(-j.largura/2, -j.altura/2, j.largura, j.altura);
 
-            // Desenha a cabeça virada para frente
             g2d.setColor(Color.WHITE);
             int tamanhoCabeca = 24;
             g2d.fillOval(j.largura/2 - (int)(tamanhoCabeca * 0.8), -tamanhoCabeca/2, tamanhoCabeca, tamanhoCabeca);
 
-            // Desenha as mãos se for goleiro
             if (j == goleiroEsquerda || j == goleiroDireita) {
                 int tamanhoMao = 10;
                 g2d.fillOval(j.largura/2 - 5, -j.altura/2 - 2, tamanhoMao, tamanhoMao);
                 g2d.fillOval(j.largura/2 - 5, j.altura/2 - 8, tamanhoMao, tamanhoMao);
             }
 
-            // Restaura o canvas para o próximo objeto
             g2d.setTransform(oldTransform);
         }
     }
