@@ -34,6 +34,12 @@ public class Cenario extends JPanel {
     public Jogador goleiroDireita;
     public Jogador linhaDireita;
 
+    // --- NOVAS VARIÁVEIS DO CRONÔMETRO DINÂMICO ---
+    private int periodoPlacar = 1;
+    private int minPlacar = 0;
+    private int segPlacar = 0;
+    private boolean partidaTerminada = false;
+
     public Cenario(Bola bola) {
         this.bola = bola;
         setBackground(Color.BLACK);
@@ -59,6 +65,14 @@ public class Cenario extends JPanel {
         });
     }
 
+    // --- NOVO MÉTODO: Resolve o erro "cannot find symbol" da Main.java ---
+    public void atualizarCronometro(int periodo, int minutos, int segundos, boolean fim) {
+        this.periodoPlacar = periodo;
+        this.minPlacar = minutos;
+        this.segPlacar = segundos;
+        this.partidaTerminada = fim;
+    }
+
     public void configurarAnimacaoAura(int x, int y, int raio, boolean ativo) {
         this.auraX = x;
         this.auraY = y;
@@ -73,7 +87,6 @@ public class Cenario extends JPanel {
         this.desenharAuraBot = ativo;
     }
 
-    // Corrigido aqui!
     public boolean jogoRodando() { return emPartida; }
 
     public void verificarGol() {
@@ -161,11 +174,22 @@ public class Cenario extends JPanel {
         g2d.setStroke(new BasicStroke(1));
         g2d.setColor(Color.WHITE);
 
+        // --- EXIBIÇÃO DINÂMICA DO PLACAR E CRONÔMETRO ---
         g2d.setFont(new Font("Arial", Font.BOLD, 22));
         g2d.drawString("FUT PONG", 50, 40);
-        g2d.drawString("2° | 44:55", 640, 40);
-        String textoPlacar = "|    P1 - " + golsP1 + " / " + golsBot + " - BOT    |";
-        g2d.drawString(textoPlacar, 285, 40);
+
+        if (partidaTerminada) {
+            g2d.drawString("FIM DE JOGO", 600, 40);
+            String textoPlacar = "|    P1 - " + golsP1 + " / " + golsBot + " - BOT    |";
+            g2d.drawString(textoPlacar, 285, 40);
+        } else {
+            // Mantém os 2 dígitos fixos no tempo (Ex: 04:05)
+            String tempoFormatado = String.format("%02d:%02d", minPlacar, segPlacar);
+            g2d.drawString(periodoPlacar + "° | " + tempoFormatado, 640, 40);
+
+            String textoPlacar = "|    P1 - " + golsP1 + " / " + golsBot + " - BOT    |";
+            g2d.drawString(textoPlacar, 285, 40);
+        }
 
         g2d.fillOval((int)bola.x, (int)bola.y, bola.tamanho, bola.tamanho);
 

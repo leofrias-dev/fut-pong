@@ -26,6 +26,13 @@ public class Main extends JFrame {
     private int tempoDesvioBot = 0;
     private int direcaoDesvioY = 0;
 
+    // --- VARIÁVEIS DO SISTEMA DE CRONÔMETRO RECALIBRADO ---
+    private int periodoAtual = 1;      // Começa no 1° Tempo
+    private int minutosVirtuais = 0;   // Minutos no placar (0 a 45)
+    private int segundosVirtuais = 0;  // Segundos no placar (0 a 59)
+    private double acumuladorMilis = 0; // Acumula o tempo real para conversão justa
+    private boolean fimDeJogo = false; // Bloqueia o jogo no apito final
+
     public Main() {
         setTitle("Fut-Pong");
         setSize(800, 650);
@@ -40,6 +47,8 @@ public class Main extends JFrame {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
+                if (fimDeJogo) return; // Bloqueia comandos se o jogo acabou
+
                 int c = e.getKeyCode();
                 if (c == KeyEvent.VK_W) teclaW = true;
                 if (c == KeyEvent.VK_A) teclaA = true;
@@ -63,22 +72,58 @@ public class Main extends JFrame {
         });
 
         timer = new Timer(16, e -> {
-            if (cenario.jogoRodando()) {
+            if (cenario.jogoRodando() && !fimDeJogo) {
                 bola.mexer();
                 aplicarFisicaCurvaCenario();
 
+                // --- CRONÔMETRO DE PRECISÃO: 1 MINUTO REAL = 45 MINUTOS VIRTUAIS ---
+                acumuladorMilis += 16 * 45;
+
+                if (acumuladorMilis >= 1000) {
+                    segundosVirtuais += (int)(acumuladorMilis / 1000);
+                    acumuladorMilis = acumuladorMilis % 1000;
+                }
+
+                if (segundosVirtuais >= 60) {
+                    minutosVirtuais += segundosVirtuais / 60;
+                    segundosVirtuais = segundosVirtuais % 60;
+                }
+
+                // Checa o fim do tempo atual (limite de 45 minutos)
+                if (minutosVirtuais >= 45) {
+                    minutosVirtuais = 45;
+                    segundosVirtuais = 0;
+
+                    if (periodoAtual == 1) {
+                        periodoAtual = 2;
+                        minutosVirtuais = 0;
+                        segundosVirtuais = 0;
+                        acumuladorMilis = 0;
+
+                        // Centraliza a bola para reiniciar o jogo
+                        bola.x = 385;
+                        bola.y = 320;
+                        bola.velX = 0;
+                        bola.velY = 0;
+                    } else if (periodoAtual == 2) {
+                        fimDeJogo = true;
+                    }
+                }
+
+                // Envia os tempos atualizados para a classe Cenario desenhar
+                cenario.atualizarCronometro(periodoAtual, minutosVirtuais, segundosVirtuais, fimDeJogo);
+
                 // --- SISTEMA ANTI-TRAVAMENTO REFORÇADO (ZONA DE EJEÇÃO DOS CANTOS) ---
-                // Se a bola estiver muito próxima das quinas extremas do campo, força um empurrão para o centro
-                if (bola.x < 50 && bola.y < 100) { // Canto Superior Esquerdo
+                if (bola.x < 50 && bola.y < 100) {
                     bola.velX += 0.8;
                     bola.velY += 0.8;
-                } else if (bola.x < 50 && bola.y > 540) { // Canto Inferior Esquerdo
+                } else if (bola.x < 50 && bola.y > 540) {
                     bola.velX += 0.8;
                     bola.velY -= 0.8;
-                } else if (bola.x > 720 && bola.y < 100) { // Canto Superior Direita
+                } else if (bola.x > 720 && bola.y < 100) {
                     bola.velX -= 0.8;
                     bola.velY += 0.8;
-                } else if (bola.x > 720 && bola.y > 540) { // Canto Inferior Direita
+                } else if (bola.x > 720 && bola.y > 540) {
                     bola.velX -= 0.8;
                     bola.velY -= 0.8;
                 }
@@ -99,7 +144,6 @@ public class Main extends JFrame {
                     cenario.linhaEsquerda.y = oldY;
                 }
 
-                // ANTI-PRISÃO PLAYER: Se forçado para dentro da área, ejeta para fora
                 if (isNaAreaProibida(cenario.linhaEsquerda)) {
                     if (cenario.linhaEsquerda.x < 400) {
                         cenario.linhaEsquerda.x = 105;
@@ -153,22 +197,26 @@ public class Main extends JFrame {
                 if (cenario.goleiroDireita.x < 685) cenario.goleiroDireita.x = 685;
                 if (cenario.goleiroDireita.x > 775) cenario.goleiroDireita.x = 775;
 
-                // --- BOT MOVIMENTO INTELIGENTE ---
+                // --- BOT MOVIMENTO INTELIGENTE (ALVO FILTRADO CONTRA TRANCAMENTO) ---
                 int oldBotX = cenario.linhaDireita.x;
                 int oldBotY = cenario.linhaDireita.y;
                 int destinoX = cenario.linhaDireita.x;
                 int destinoY = cenario.linhaDireita.y;
 
+                // Limita a visão de mira do bot para ele nunca tentar sair dos limites úteis do campo
+                double alvoBolaX = Math.max(15, Math.min(770, bola.x));
+                double alvoBolaY = Math.max(65, Math.min(595, bola.y));
+
                 if (tempoDesvioBot > 0) {
                     destinoY += direcaoDesvioY * (velocidadeLinhaDireita + 1);
                     tempoDesvioBot--;
                 } else {
-                    if (Math.abs(bola.y - destinoY) > 5) {
-                        if (bola.y > destinoY) destinoY += velocidadeLinhaDireita;
-                        else if (bola.y < destinoY) destinoY -= velocidadeLinhaDireita;
+                    if (Math.abs(alvoBolaY - destinoY) > 5) {
+                        if (alvoBolaY > destinoY) destinoY += velocidadeLinhaDireita;
+                        else if (alvoBolaY < destinoY) destinoY -= velocidadeLinhaDireita;
                     }
-                    if (bola.x > destinoX + 5) destinoX += (velocidadeLinhaDireita - 1);
-                    else if (bola.x < destinoX - 5) destinoX -= (velocidadeLinhaDireita - 1);
+                    if (alvoBolaX > destinoX + 5) destinoX += (velocidadeLinhaDireita - 1);
+                    else if (alvoBolaX < destinoX - 5) destinoX -= (velocidadeLinhaDireita - 1);
                 }
 
                 Jogador tentX = new Jogador(destinoX, cenario.linhaDireita.y, "direita");
@@ -215,7 +263,7 @@ public class Main extends JFrame {
                     }
                 }
 
-                // --- CONDUÇÃO ---
+                // --- SISTEMA DE COLISÕES GERAIS ---
                 if (!pisaAtivo) aplicarColisaoFisica(cenario.linhaEsquerda, bola, 1.0);
                 aplicarColisaoFisica(cenario.goleiroEsquerda, bola, 1.1);
                 aplicarColisaoFisica(cenario.goleiroDireita, bola, 1.1);
@@ -400,6 +448,7 @@ public class Main extends JFrame {
         j.y = (int) ((cy + Math.sin(angulo) * limite) - (j.altura / 2.0));
     }
 
+    // --- METODO DE FISICA DE REBOTE ATUALIZADO (ANTI-GRUDE DIAGONAL COM MARGEM EXTRA) ---
     private void aplicarColisaoFisica(Jogador j, Bola b, double multiplicador) {
         Rectangle rectBola = b.getLimites();
         Rectangle rectJogador = new Rectangle(j.x, j.y, j.largura, j.altura);
@@ -420,8 +469,12 @@ public class Main extends JFrame {
                 distancia = Math.hypot(dx, dy);
             }
 
-            b.velX = (dx / distancia) * 4.5 * multiplicador;
-            b.velY = (dy / distancia) * 4.5 * multiplicador;
+            double dirX = dx / distancia;
+            double dirY = dy / distancia;
+            double forcaRebote = 5.5 * multiplicador;
+
+            b.velX = dirX * forcaRebote;
+            b.velY = dirY * forcaRebote;
 
             if (b.x < 45 || b.x > 735) {
                 b.velY += (b.velY >= 0) ? 2.5 : -2.5;
@@ -430,15 +483,12 @@ public class Main extends JFrame {
                 b.velX += (b.velX >= 0) ? 2.5 : -2.5;
             }
 
-            double sobreposicaoX = (j.largura / 2.0 + b.tamanho / 2.0) - Math.abs(dx);
-            double sobreposicaoY = (j.altura / 2.0 + b.tamanho / 2.0) - Math.abs(dy);
+            double raioCombinado = (j.largura / 2.0) + (b.tamanho / 2.0);
+            double sobreposicao = raioCombinado - distancia;
 
-            if (sobreposicaoX > 0 && sobreposicaoY > 0) {
-                if (sobreposicaoX < sobreposicaoY) {
-                    b.x += (dx > 0) ? sobreposicaoX : -sobreposicaoX;
-                } else {
-                    b.y += (dy > 0) ? sobreposicaoY : -sobreposicaoY;
-                }
+            if (sobreposicao > 0) {
+                b.x += dirX * (sobreposicao + 2.0);
+                b.y += dirY * (sobreposicao + 2.0);
             }
         }
     }
