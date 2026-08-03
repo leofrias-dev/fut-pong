@@ -8,6 +8,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.BasicStroke;
 import java.awt.geom.AffineTransform;
+// --- IMPORTAÇÕES NOVAS PARA A TRANSPARÊNCIA E TEXTO ---
+import java.awt.AlphaComposite;
+import java.awt.Composite;
+import java.awt.FontMetrics;
 
 public class Cenario extends JPanel {
 
@@ -34,11 +38,15 @@ public class Cenario extends JPanel {
     public Jogador goleiroDireita;
     public Jogador linhaDireita;
 
-    // --- NOVAS VARIÁVEIS DO CRONÔMETRO DINÂMICO ---
+    // --- VARIÁVEIS DO CRONÔMETRO DINÂMICO ---
     private int periodoPlacar = 1;
     private int minPlacar = 0;
     private int segPlacar = 0;
     private boolean partidaTerminada = false;
+
+    // --- VARIÁVEIS DO FADE-OUT (TEXTO NO FUNDO) ---
+    private int periodoTextoFade = 1;
+    private float alphaTextoFade = 0.25f;
 
     public Cenario(Bola bola) {
         this.bola = bola;
@@ -65,12 +73,17 @@ public class Cenario extends JPanel {
         });
     }
 
-    // --- NOVO MÉTODO: Resolve o erro "cannot find symbol" da Main.java ---
     public void atualizarCronometro(int periodo, int minutos, int segundos, boolean fim) {
         this.periodoPlacar = periodo;
         this.minPlacar = minutos;
         this.segPlacar = segundos;
         this.partidaTerminada = fim;
+    }
+
+    // --- NOVO MÉTODO: Recebe a opacidade do Main ---
+    public void atualizarTextoFade(int periodo, float alpha) {
+        this.periodoTextoFade = periodo;
+        this.alphaTextoFade = alpha;
     }
 
     public void configurarAnimacaoAura(int x, int y, int raio, boolean ativo) {
@@ -159,6 +172,28 @@ public class Cenario extends JPanel {
         g2d.drawRect(685, 195, 90, 270);
         g2d.drawRect(775, 270, 8, 120);
 
+        // --- DESENHO DO TEXTO DE FUNDO (MARCA D'ÁGUA) ---
+        if (alphaTextoFade > 0.0f) {
+            Composite originalComposite = g2d.getComposite(); // Salva a opacidade padrão
+
+            // Aplica a transparência que está vindo do Main
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaTextoFade));
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("Arial", Font.BOLD, 100)); // Fonte bem grande
+
+            String texto = periodoTextoFade + "º TEMPO";
+
+            // Centraliza o texto perfeitamente na tela
+            FontMetrics fm = g2d.getFontMetrics();
+            int xTexto = (800 - fm.stringWidth(texto)) / 2;
+            int yTexto = (650 - fm.getHeight()) / 2 + fm.getAscent() - 20;
+
+            g2d.drawString(texto, xTexto, yTexto);
+
+            // Restaura a opacidade para que os jogadores e bola não fiquem transparentes!
+            g2d.setComposite(originalComposite);
+        }
+
         if (desenharAura) {
             g2d.setColor(new Color(255, 255, 255, 100));
             g2d.setStroke(new BasicStroke(2));
@@ -183,7 +218,6 @@ public class Cenario extends JPanel {
             String textoPlacar = "|    P1 - " + golsP1 + " / " + golsBot + " - BOT    |";
             g2d.drawString(textoPlacar, 285, 40);
         } else {
-            // Mantém os 2 dígitos fixos no tempo (Ex: 04:05)
             String tempoFormatado = String.format("%02d:%02d", minPlacar, segPlacar);
             g2d.drawString(periodoPlacar + "° | " + tempoFormatado, 640, 40);
 
@@ -191,8 +225,10 @@ public class Cenario extends JPanel {
             g2d.drawString(textoPlacar, 285, 40);
         }
 
+        // Desenha a bola
         g2d.fillOval((int)bola.x, (int)bola.y, bola.tamanho, bola.tamanho);
 
+        // Desenha os jogadores
         Jogador[] todosJogadores = {goleiroEsquerda, linhaEsquerda, goleiroDireita, linhaDireita};
         for (Jogador j : todosJogadores) {
             AffineTransform oldTransform = g2d.getTransform();
@@ -227,5 +263,14 @@ public class Cenario extends JPanel {
 
             g2d.setTransform(oldTransform);
         }
+    }
+
+    // --- NOVO MÉTODO ADICIONADO AQUI ---
+    // Método chamado pelo Main quando passam os 5 segundos após o fim do jogo
+    public void resetarParaMenu() {
+        this.emPartida = false;
+        this.golsP1 = 0;
+        this.golsBot = 0;
+        resetarBola(); // Reaproveita o seu código que centraliza bola e jogadores
     }
 }

@@ -19,19 +19,24 @@ public class Main extends JFrame {
     private int raioAuraBot = 0;
     private int cooldownChuteBot = 0;
 
-    private int velocidadeSeuJogador = 4;
+    // --- VELOCIDADES ATUALIZADAS ---
+    private int velocidadeSeuJogador = 5;   // Você um pouco mais rápido (era 4)
     private int velocidadeGoleiro = 3;
-    private int velocidadeLinhaDireita = 3;
+    private int velocidadeLinhaDireita = 4; // Bot mais rápido, mas menor que a sua (era 3)
 
     private int tempoDesvioBot = 0;
     private int direcaoDesvioY = 0;
 
-    // --- VARIÁVEIS DO SISTEMA DE CRONÔMETRO RECALIBRADO ---
-    private int periodoAtual = 1;      // Começa no 1° Tempo
-    private int minutosVirtuais = 0;   // Minutos no placar (0 a 45)
-    private int segundosVirtuais = 0;  // Segundos no placar (0 a 59)
-    private double acumuladorMilis = 0; // Acumula o tempo real para conversão justa
-    private boolean fimDeJogo = false; // Bloqueia o jogo no apito final
+    private int periodoAtual = 1;
+    private int minutosVirtuais = 0;
+    private int segundosVirtuais = 0;
+    private double acumuladorMilis = 0;
+    private boolean fimDeJogo = false;
+
+    // Variável para contar o tempo de espera no final do jogo
+    private int framesEsperaFimDeJogo = 0;
+
+    private float alphaTextoTempo = 0.25f;
 
     public Main() {
         setTitle("Fut-Pong");
@@ -47,7 +52,7 @@ public class Main extends JFrame {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (fimDeJogo) return; // Bloqueia comandos se o jogo acabou
+                if (fimDeJogo) return;
 
                 int c = e.getKeyCode();
                 if (c == KeyEvent.VK_W) teclaW = true;
@@ -72,225 +77,276 @@ public class Main extends JFrame {
         });
 
         timer = new Timer(16, e -> {
-            if (cenario.jogoRodando() && !fimDeJogo) {
-                bola.mexer();
-                aplicarFisicaCurvaCenario();
+            if (cenario.jogoRodando()) {
 
-                // --- CRONÔMETRO DE PRECISÃO: 1 MINUTO REAL = 45 MINUTOS VIRTUAIS ---
-                acumuladorMilis += 16 * 45;
+                // Se o jogo NÃO acabou, roda a física normalmente
+                if (!fimDeJogo) {
+                    int passosFisica = 4;
+                    for (int passo = 0; passo < passosFisica; passo++) {
+                        bola.x += bola.velX / passosFisica;
+                        bola.y += bola.velY / passosFisica;
 
-                if (acumuladorMilis >= 1000) {
-                    segundosVirtuais += (int)(acumuladorMilis / 1000);
-                    acumuladorMilis = acumuladorMilis % 1000;
-                }
+                        if (bola.y < 60) {
+                            bola.y = 60;
+                            bola.velY = -bola.velY;
+                        } else if (bola.y > 600 - bola.tamanho) {
+                            bola.y = 600 - bola.tamanho;
+                            bola.velY = -bola.velY;
+                        }
 
-                if (segundosVirtuais >= 60) {
-                    minutosVirtuais += segundosVirtuais / 60;
-                    segundosVirtuais = segundosVirtuais % 60;
-                }
+                        if (bola.y < 240 || bola.y > 420) {
+                            if (bola.x < 10) {
+                                bola.x = 10;
+                                bola.velX = -bola.velX;
+                            } else if (bola.x > 775 - bola.tamanho) {
+                                bola.x = 775 - bola.tamanho;
+                                bola.velX = -bola.velX;
+                            }
+                        }
 
-                // Checa o fim do tempo atual (limite de 45 minutos)
-                if (minutosVirtuais >= 45) {
-                    minutosVirtuais = 45;
-                    segundosVirtuais = 0;
+                        aplicarFisicaCurvaCenario();
 
-                    if (periodoAtual == 1) {
-                        periodoAtual = 2;
+                        if (!pisaAtivo) aplicarColisaoFisica(cenario.linhaEsquerda, bola, 1.0);
+                        aplicarColisaoFisica(cenario.goleiroEsquerda, bola, 1.1);
+                        aplicarColisaoFisica(cenario.goleiroDireita, bola, 1.1);
+                        aplicarColisaoFisica(cenario.linhaDireita, bola, 1.0);
+                    }
+
+                    acumuladorMilis += 16 * 45;
+
+                    if (acumuladorMilis >= 1000) {
+                        segundosVirtuais += (int)(acumuladorMilis / 1000);
+                        acumuladorMilis = acumuladorMilis % 1000;
+                    }
+
+                    if (segundosVirtuais >= 60) {
+                        minutosVirtuais += segundosVirtuais / 60;
+                        segundosVirtuais = segundosVirtuais % 60;
+                    }
+
+                    if (minutosVirtuais >= 45) {
+                        minutosVirtuais = 45;
+                        segundosVirtuais = 0;
+
+                        if (periodoAtual == 1) {
+                            periodoAtual = 2;
+                            minutosVirtuais = 0;
+                            segundosVirtuais = 0;
+                            acumuladorMilis = 0;
+                            alphaTextoTempo = 0.25f;
+
+                            bola.x = 385;
+                            bola.y = 320;
+                            bola.velX = 0;
+                            bola.velY = 0;
+                        } else if (periodoAtual == 2) {
+                            fimDeJogo = true;
+                        }
+                    }
+
+                    if (alphaTextoTempo > 0.0f) {
+                        alphaTextoTempo -= 0.0015f;
+                        if (alphaTextoTempo < 0.0f) alphaTextoTempo = 0.0f;
+                    }
+
+                    if (bola.x < 50 && bola.y < 100) {
+                        bola.velX += 0.8;
+                        bola.velY += 0.8;
+                    } else if (bola.x < 50 && bola.y > 540) {
+                        bola.velX += 0.8;
+                        bola.velY -= 0.8;
+                    } else if (bola.x > 720 && bola.y < 100) {
+                        bola.velX -= 0.8;
+                        bola.velY += 0.8;
+                    } else if (bola.x > 720 && bola.y > 540) {
+                        bola.velX -= 0.8;
+                        bola.velY -= 0.8;
+                    }
+
+                    if (cooldownChuteBot > 0) cooldownChuteBot--;
+
+                    int oldX = cenario.linhaEsquerda.x;
+                    int oldY = cenario.linhaEsquerda.y;
+
+                    if (teclaW) cenario.linhaEsquerda.y -= velocidadeSeuJogador;
+                    if (teclaS) cenario.linhaEsquerda.y += velocidadeSeuJogador;
+                    if (teclaA) cenario.linhaEsquerda.x -= velocidadeSeuJogador;
+                    if (teclaD) cenario.linhaEsquerda.x += velocidadeSeuJogador;
+
+                    if (estaForaDoCampo(cenario.linhaEsquerda) || isNaAreaProibida(cenario.linhaEsquerda)) {
+                        cenario.linhaEsquerda.x = oldX;
+                        cenario.linhaEsquerda.y = oldY;
+                    }
+
+                    if (isNaAreaProibida(cenario.linhaEsquerda)) {
+                        if (cenario.linhaEsquerda.x < 400) {
+                            cenario.linhaEsquerda.x = 105;
+                        } else {
+                            cenario.linhaEsquerda.x = 680 - cenario.linhaEsquerda.largura;
+                        }
+                    }
+
+                    boolean bolaNaAreaEsq = (bola.x >= 10 && bola.x <= 100 && bola.y >= 195 && bola.y <= 465);
+
+                    if (bolaNaAreaEsq) {
+                        if (cenario.goleiroEsquerda.x < bola.x) cenario.goleiroEsquerda.x += velocidadeGoleiro;
+                        if (cenario.goleiroEsquerda.x > bola.x) cenario.goleiroEsquerda.x -= velocidadeGoleiro;
+
+                        if (bola.y > cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y += velocidadeGoleiro;
+                        else if (bola.y < cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
+                    } else {
+                        if (bola.y > cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y < 420) cenario.goleiroEsquerda.y += velocidadeGoleiro;
+                        else if (bola.y < cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y > 195) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
+
+                        if (bola.x > 250) {
+                            if (cenario.goleiroEsquerda.x < 80) cenario.goleiroEsquerda.x += 2;
+                        } else {
+                            if (cenario.goleiroEsquerda.x > 30) cenario.goleiroEsquerda.x -= 2;
+                        }
+                    }
+
+                    boolean bolaNaAreaDir = (bola.x >= 685 && bola.x <= 775 && bola.y >= 195 && bola.y <= 465);
+
+                    if (bolaNaAreaDir) {
+                        if (cenario.goleiroDireita.x < bola.x) cenario.goleiroDireita.x += velocidadeGoleiro;
+                        if (cenario.goleiroDireita.x > bola.x) cenario.goleiroDireita.x -= velocidadeGoleiro;
+
+                        if (bola.y > cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y += velocidadeGoleiro;
+                        else if (bola.y < cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y -= velocidadeGoleiro;
+                    } else {
+                        if (bola.y > cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y < 420) cenario.goleiroDireita.y += velocidadeGoleiro;
+                        else if (bola.y < cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y > 195) cenario.goleiroDireita.y -= velocidadeGoleiro;
+
+                        if (bola.x < 550) {
+                            if (cenario.goleiroDireita.x > 690) cenario.goleiroDireita.x -= 2;
+                        } else {
+                            if (cenario.goleiroDireita.x < 740) cenario.goleiroDireita.x += 2;
+                        }
+                    }
+
+                    if (cenario.goleiroEsquerda.x < 10) cenario.goleiroEsquerda.x = 10;
+                    if (cenario.goleiroEsquerda.x > 100) cenario.goleiroEsquerda.x = 100;
+                    if (cenario.goleiroDireita.x < 685) cenario.goleiroDireita.x = 685;
+                    if (cenario.goleiroDireita.x > 775) cenario.goleiroDireita.x = 775;
+
+                    int oldBotX = cenario.linhaDireita.x;
+                    int oldBotY = cenario.linhaDireita.y;
+                    int destinoX = cenario.linhaDireita.x;
+                    int destinoY = cenario.linhaDireita.y;
+
+                    double alvoBolaX = Math.max(15, Math.min(770, bola.x));
+                    double alvoBolaY = Math.max(65, Math.min(595, bola.y));
+
+                    if (bola.velY < -2 && bola.y < 160) {
+                        alvoBolaY = bola.y + 50;
+                    } else if (bola.velY > 2 && bola.y > 500) {
+                        alvoBolaY = bola.y - 50;
+                    }
+
+                    if (bola.y < 85) {
+                        alvoBolaY = 95;
+                    } else if (bola.y > 575) {
+                        alvoBolaY = 565;
+                    }
+
+                    if (tempoDesvioBot > 0) {
+                        destinoY += direcaoDesvioY * (velocidadeLinhaDireita + 1);
+                        tempoDesvioBot--;
+                    } else {
+                        if (Math.abs(alvoBolaY - destinoY) > 5) {
+                            if (alvoBolaY > destinoY) destinoY += velocidadeLinhaDireita;
+                            else if (alvoBolaY < destinoY) destinoY -= velocidadeLinhaDireita;
+                        }
+                        if (alvoBolaX > destinoX + 5) destinoX += (velocidadeLinhaDireita - 1);
+                        else if (alvoBolaX < destinoX - 5) destinoX -= (velocidadeLinhaDireita - 1);
+                    }
+
+                    Jogador tentX = new Jogador(destinoX, cenario.linhaDireita.y, "direita");
+                    if (!estaForaDoCampo(tentX) && !isNaAreaProibida(tentX)) cenario.linhaDireita.x = destinoX;
+
+                    Jogador tentY = new Jogador(cenario.linhaDireita.x, destinoY, "direita");
+                    if (!estaForaDoCampo(tentY) && !isNaAreaProibida(tentY)) cenario.linhaDireita.y = destinoY;
+
+                    if (isNaAreaProibida(cenario.linhaDireita)) {
+                        if (cenario.linhaDireita.x > 400) {
+                            cenario.linhaDireita.x = 680 - cenario.linhaDireita.largura;
+                        } else {
+                            cenario.linhaDireita.x = 105;
+                        }
+                    }
+
+                    double distBotBola = Math.hypot(cenario.linhaDireita.x - bola.x, cenario.linhaDireita.y - bola.y);
+                    double distBotPlayer = Math.hypot(cenario.linhaDireita.x - cenario.linhaEsquerda.x, cenario.linhaDireita.y - cenario.linhaEsquerda.y);
+
+                    boolean bolaNoCanto = (bola.x < 45 || bola.x > 735 || bola.y < 95 || bola.y > 565);
+
+                    if (bolaNoCanto && distBotBola < 60) {
+                        bola.velX = (bola.x < 400) ? 5.0 : -5.0;
+                        bola.velY = (bola.y < 300) ? 4.5 : -4.5;
+                    }
+
+                    if (cooldownChuteBot == 0 && !botChutando && !bolaNoCanto) {
+                        if (distBotBola < 55 || distBotPlayer < 75) {
+                            botChutando = true;
+                            raioAuraBot = 0;
+                            cooldownChuteBot = 90;
+                            executarChuteBot();
+                        }
+                    }
+
+                    if (checarColisaoJogadores(cenario.linhaEsquerda, cenario.linhaDireita)) {
+                        cenario.linhaEsquerda.x = oldX;
+                        cenario.linhaEsquerda.y = oldY;
+                        if (tempoDesvioBot <= 0) {
+                            tempoDesvioBot = 35;
+                            direcaoDesvioY = (cenario.linhaDireita.y >= cenario.linhaEsquerda.y) ? 1 : -1;
+                        }
+                    }
+
+                    cenario.verificarGol();
+
+                    if (pisaAtivo) {
+                        raioAura += 6;
+                        cenario.configurarAnimacaoAura(cenario.linhaEsquerda.x, cenario.linhaEsquerda.y, raioAura, true);
+                        if (raioAura >= 80) {
+                            pisaAtivo = false;
+                            raioAura = 0;
+                            cenario.configurarAnimacaoAura(0, 0, 0, false);
+                        }
+                    }
+
+                    if (botChutando) {
+                        raioAuraBot += 6;
+                        cenario.configurarAnimacaoAuraBot(cenario.linhaDireita.x, cenario.linhaDireita.y, raioAuraBot, true);
+                        if (raioAuraBot >= 80) {
+                            botChutando = false;
+                            raioAuraBot = 0;
+                            cenario.configurarAnimacaoAuraBot(0, 0, 0, false);
+                        }
+                    }
+
+                } else {
+                    // --- CÓDIGO DE RETORNO AUTOMÁTICO (ESPERANDO 5 SEGUNDOS) ---
+                    framesEsperaFimDeJogo++;
+                    if (framesEsperaFimDeJogo >= 300) { // 300 frames * 16ms ~= 4.8 a 5 segundos
+
+                        // Reseta todas as variáveis do Main
+                        fimDeJogo = false;
+                        framesEsperaFimDeJogo = 0;
+                        periodoAtual = 1;
                         minutosVirtuais = 0;
                         segundosVirtuais = 0;
                         acumuladorMilis = 0;
+                        alphaTextoTempo = 0.25f;
 
-                        // Centraliza a bola para reiniciar o jogo
-                        bola.x = 385;
-                        bola.y = 320;
-                        bola.velX = 0;
-                        bola.velY = 0;
-                    } else if (periodoAtual == 2) {
-                        fimDeJogo = true;
+                        // Envia comando pro Cenário voltar pra tela de Início
+                        cenario.resetarParaMenu();
                     }
                 }
 
-                // Envia os tempos atualizados para a classe Cenario desenhar
+                // Mantém o cronômetro/placar e fade atualizados (importante para mostrar o "FIM DE JOGO")
                 cenario.atualizarCronometro(periodoAtual, minutosVirtuais, segundosVirtuais, fimDeJogo);
-
-                // --- SISTEMA ANTI-TRAVAMENTO REFORÇADO (ZONA DE EJEÇÃO DOS CANTOS) ---
-                if (bola.x < 50 && bola.y < 100) {
-                    bola.velX += 0.8;
-                    bola.velY += 0.8;
-                } else if (bola.x < 50 && bola.y > 540) {
-                    bola.velX += 0.8;
-                    bola.velY -= 0.8;
-                } else if (bola.x > 720 && bola.y < 100) {
-                    bola.velX -= 0.8;
-                    bola.velY += 0.8;
-                } else if (bola.x > 720 && bola.y > 540) {
-                    bola.velX -= 0.8;
-                    bola.velY -= 0.8;
-                }
-
-                if (cooldownChuteBot > 0) cooldownChuteBot--;
-
-                // --- MOVIMENTAÇÃO PLAYER ---
-                int oldX = cenario.linhaEsquerda.x;
-                int oldY = cenario.linhaEsquerda.y;
-
-                if (teclaW) cenario.linhaEsquerda.y -= velocidadeSeuJogador;
-                if (teclaS) cenario.linhaEsquerda.y += velocidadeSeuJogador;
-                if (teclaA) cenario.linhaEsquerda.x -= velocidadeSeuJogador;
-                if (teclaD) cenario.linhaEsquerda.x += velocidadeSeuJogador;
-
-                if (estaForaDoCampo(cenario.linhaEsquerda) || isNaAreaProibida(cenario.linhaEsquerda)) {
-                    cenario.linhaEsquerda.x = oldX;
-                    cenario.linhaEsquerda.y = oldY;
-                }
-
-                if (isNaAreaProibida(cenario.linhaEsquerda)) {
-                    if (cenario.linhaEsquerda.x < 400) {
-                        cenario.linhaEsquerda.x = 105;
-                    } else {
-                        cenario.linhaEsquerda.x = 680 - cenario.linhaEsquerda.largura;
-                    }
-                }
-
-                // --- INTELIGÊNCIA DO GOLEIRO ESQUERDA ---
-                boolean bolaNaAreaEsq = (bola.x >= 10 && bola.x <= 100 && bola.y >= 195 && bola.y <= 465);
-
-                if (bolaNaAreaEsq) {
-                    if (cenario.goleiroEsquerda.x < bola.x) cenario.goleiroEsquerda.x += velocidadeGoleiro;
-                    if (cenario.goleiroEsquerda.x > bola.x) cenario.goleiroEsquerda.x -= velocidadeGoleiro;
-
-                    if (bola.y > cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y += velocidadeGoleiro;
-                    else if (bola.y < cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
-                } else {
-                    if (bola.y > cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y < 420) cenario.goleiroEsquerda.y += velocidadeGoleiro;
-                    else if (bola.y < cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y > 195) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
-
-                    if (bola.x > 250) {
-                        if (cenario.goleiroEsquerda.x < 80) cenario.goleiroEsquerda.x += 2;
-                    } else {
-                        if (cenario.goleiroEsquerda.x > 30) cenario.goleiroEsquerda.x -= 2;
-                    }
-                }
-
-                // --- INTELIGÊNCIA DO GOLEIRO DIREITA ---
-                boolean bolaNaAreaDir = (bola.x >= 685 && bola.x <= 775 && bola.y >= 195 && bola.y <= 465);
-
-                if (bolaNaAreaDir) {
-                    if (cenario.goleiroDireita.x < bola.x) cenario.goleiroDireita.x += velocidadeGoleiro;
-                    if (cenario.goleiroDireita.x > bola.x) cenario.goleiroDireita.x -= velocidadeGoleiro;
-
-                    if (bola.y > cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y += velocidadeGoleiro;
-                    else if (bola.y < cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y -= velocidadeGoleiro;
-                } else {
-                    if (bola.y > cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y < 420) cenario.goleiroDireita.y += velocidadeGoleiro;
-                    else if (bola.y < cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y > 195) cenario.goleiroDireita.y -= velocidadeGoleiro;
-
-                    if (bola.x < 550) {
-                        if (cenario.goleiroDireita.x > 690) cenario.goleiroDireita.x -= 2;
-                    } else {
-                        if (cenario.goleiroDireita.x < 740) cenario.goleiroDireita.x += 2;
-                    }
-                }
-
-                if (cenario.goleiroEsquerda.x < 10) cenario.goleiroEsquerda.x = 10;
-                if (cenario.goleiroEsquerda.x > 100) cenario.goleiroEsquerda.x = 100;
-                if (cenario.goleiroDireita.x < 685) cenario.goleiroDireita.x = 685;
-                if (cenario.goleiroDireita.x > 775) cenario.goleiroDireita.x = 775;
-
-                // --- BOT MOVIMENTO INTELIGENTE (ALVO FILTRADO CONTRA TRANCAMENTO) ---
-                int oldBotX = cenario.linhaDireita.x;
-                int oldBotY = cenario.linhaDireita.y;
-                int destinoX = cenario.linhaDireita.x;
-                int destinoY = cenario.linhaDireita.y;
-
-                // Limita a visão de mira do bot para ele nunca tentar sair dos limites úteis do campo
-                double alvoBolaX = Math.max(15, Math.min(770, bola.x));
-                double alvoBolaY = Math.max(65, Math.min(595, bola.y));
-
-                if (tempoDesvioBot > 0) {
-                    destinoY += direcaoDesvioY * (velocidadeLinhaDireita + 1);
-                    tempoDesvioBot--;
-                } else {
-                    if (Math.abs(alvoBolaY - destinoY) > 5) {
-                        if (alvoBolaY > destinoY) destinoY += velocidadeLinhaDireita;
-                        else if (alvoBolaY < destinoY) destinoY -= velocidadeLinhaDireita;
-                    }
-                    if (alvoBolaX > destinoX + 5) destinoX += (velocidadeLinhaDireita - 1);
-                    else if (alvoBolaX < destinoX - 5) destinoX -= (velocidadeLinhaDireita - 1);
-                }
-
-                Jogador tentX = new Jogador(destinoX, cenario.linhaDireita.y, "direita");
-                if (!estaForaDoCampo(tentX) && !isNaAreaProibida(tentX)) cenario.linhaDireita.x = destinoX;
-
-                Jogador tentY = new Jogador(cenario.linhaDireita.x, destinoY, "direita");
-                if (!estaForaDoCampo(tentY) && !isNaAreaProibida(tentY)) cenario.linhaDireita.y = destinoY;
-
-                if (isNaAreaProibida(cenario.linhaDireita)) {
-                    if (cenario.linhaDireita.x > 400) {
-                        cenario.linhaDireita.x = 680 - cenario.linhaDireita.largura;
-                    } else {
-                        cenario.linhaDireita.x = 105;
-                    }
-                }
-
-                // --- INTELIGÊNCIA DE CHUTE DO BOT COM PROTEÇÃO DE CANTO ---
-                double distBotBola = Math.hypot(cenario.linhaDireita.x - bola.x, cenario.linhaDireita.y - bola.y);
-                double distBotPlayer = Math.hypot(cenario.linhaDireita.x - cenario.linhaEsquerda.x, cenario.linhaDireita.y - cenario.linhaEsquerda.y);
-
-                boolean bolaNoCanto = (bola.x < 45 || bola.x > 735 || bola.y < 95 || bola.y > 565);
-
-                if (bolaNoCanto && distBotBola < 60) {
-                    bola.velX = (bola.x < 400) ? 5.0 : -5.0;
-                    bola.velY = (bola.y < 300) ? 4.5 : -4.5;
-                }
-
-                if (cooldownChuteBot == 0 && !botChutando && !bolaNoCanto) {
-                    if (distBotBola < 55 || distBotPlayer < 75) {
-                        botChutando = true;
-                        raioAuraBot = 0;
-                        cooldownChuteBot = 90;
-                        executarChuteBot();
-                    }
-                }
-
-                // --- COLISÃO ENTRE JOGADORES DE LINHA ---
-                if (checarColisaoJogadores(cenario.linhaEsquerda, cenario.linhaDireita)) {
-                    cenario.linhaEsquerda.x = oldX;
-                    cenario.linhaEsquerda.y = oldY;
-                    if (tempoDesvioBot <= 0) {
-                        tempoDesvioBot = 35;
-                        direcaoDesvioY = (cenario.linhaDireita.y >= cenario.linhaEsquerda.y) ? 1 : -1;
-                    }
-                }
-
-                // --- SISTEMA DE COLISÕES GERAIS ---
-                if (!pisaAtivo) aplicarColisaoFisica(cenario.linhaEsquerda, bola, 1.0);
-                aplicarColisaoFisica(cenario.goleiroEsquerda, bola, 1.1);
-                aplicarColisaoFisica(cenario.goleiroDireita, bola, 1.1);
-                aplicarColisaoFisica(cenario.linhaDireita, bola, 1.0);
-
-                cenario.verificarGol();
-
-                // --- ANIMAR AURAS ---
-                if (pisaAtivo) {
-                    raioAura += 6;
-                    cenario.configurarAnimacaoAura(cenario.linhaEsquerda.x, cenario.linhaEsquerda.y, raioAura, true);
-                    if (raioAura >= 80) {
-                        pisaAtivo = false;
-                        raioAura = 0;
-                        cenario.configurarAnimacaoAura(0, 0, 0, false);
-                    }
-                }
-
-                if (botChutando) {
-                    raioAuraBot += 6;
-                    cenario.configurarAnimacaoAuraBot(cenario.linhaDireita.x, cenario.linhaDireita.y, raioAuraBot, true);
-                    if (raioAuraBot >= 80) {
-                        botChutando = false;
-                        raioAuraBot = 0;
-                        cenario.configurarAnimacaoAuraBot(0, 0, 0, false);
-                    }
-                }
+                cenario.atualizarTextoFade(periodoAtual, alphaTextoTempo);
             }
             cenario.repaint();
         });
@@ -448,7 +504,6 @@ public class Main extends JFrame {
         j.y = (int) ((cy + Math.sin(angulo) * limite) - (j.altura / 2.0));
     }
 
-    // --- METODO DE FISICA DE REBOTE ATUALIZADO (ANTI-GRUDE DIAGONAL COM MARGEM EXTRA) ---
     private void aplicarColisaoFisica(Jogador j, Bola b, double multiplicador) {
         Rectangle rectBola = b.getLimites();
         Rectangle rectJogador = new Rectangle(j.x, j.y, j.largura, j.altura);
@@ -476,19 +531,27 @@ public class Main extends JFrame {
             b.velX = dirX * forcaRebote;
             b.velY = dirY * forcaRebote;
 
+            if (b.x < 115) {
+                b.velX = Math.abs(b.velX) + 3.0;
+                b.x = j.x + j.largura + 8;
+            } else if (b.x > 685) {
+                b.velX = -Math.abs(b.velX) - 3.0;
+                b.x = j.x - b.tamanho - 8;
+            }
+
+            if (b.y < 90) {
+                b.velY = Math.abs(b.velY) + 2.0;
+                b.y = j.y + j.altura + 6;
+            } else if (b.y > 570) {
+                b.velY = -Math.abs(b.velY) - 2.0;
+                b.y = j.y - b.tamanho - 6;
+            }
+
             if (b.x < 45 || b.x > 735) {
                 b.velY += (b.velY >= 0) ? 2.5 : -2.5;
             }
             if (b.y < 90 || b.y > 570) {
-                b.velX += (b.velX >= 0) ? 2.5 : -2.5;
-            }
-
-            double raioCombinado = (j.largura / 2.0) + (b.tamanho / 2.0);
-            double sobreposicao = raioCombinado - distancia;
-
-            if (sobreposicao > 0) {
-                b.x += dirX * (sobreposicao + 2.0);
-                b.y += dirY * (sobreposicao + 2.0);
+                b.x += (b.velX >= 0) ? 2.0 : -2.0;
             }
         }
     }

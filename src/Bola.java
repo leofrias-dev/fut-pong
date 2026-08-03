@@ -5,7 +5,7 @@ public class Bola {
     public double y = 320;
     public double velX = 0;
     public double velY = 0;
-    public final int tamanho = 20;
+    public final int tamanho = 18;
 
     // Valores limites baseados no design do seu cenário
     private final int LIMITE_ESQUERDA = 10;
