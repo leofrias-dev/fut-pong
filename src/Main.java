@@ -4,6 +4,7 @@ import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
+
 public class Main extends JFrame {
 
     private Cenario cenario;
@@ -40,7 +41,7 @@ public class Main extends JFrame {
 
     public Main() {
         setTitle("Fut-Pong");
-        setSize(800, 650);
+        setSize(DimensoesJogo.TELA_LARGURA, DimensoesJogo.TELA_ALTURA);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -86,20 +87,20 @@ public class Main extends JFrame {
                         bola.x += bola.velX / passosFisica;
                         bola.y += bola.velY / passosFisica;
 
-                        if (bola.y < 60) {
-                            bola.y = 60;
+                        if (bola.y < DimensoesJogo.CAMPO_TOPO) {
+                            bola.y = DimensoesJogo.CAMPO_TOPO;
                             bola.velY = -bola.velY;
-                        } else if (bola.y > 600 - bola.tamanho) {
-                            bola.y = 600 - bola.tamanho;
+                        } else if (bola.y > DimensoesJogo.CAMPO_FUNDO - bola.tamanho) {
+                            bola.y = DimensoesJogo.CAMPO_FUNDO - bola.tamanho;
                             bola.velY = -bola.velY;
                         }
 
-                        if (bola.y < 240 || bola.y > 420) {
-                            if (bola.x < 10) {
-                                bola.x = 10;
+                        if (bola.y < DimensoesJogo.ABERTURA_LATERAL_TOPO || bola.y > DimensoesJogo.ABERTURA_LATERAL_FUNDO) {
+                            if (bola.x < DimensoesJogo.CAMPO_ESQUERDA) {
+                                bola.x = DimensoesJogo.CAMPO_ESQUERDA;
                                 bola.velX = -bola.velX;
-                            } else if (bola.x > 775 - bola.tamanho) {
-                                bola.x = 775 - bola.tamanho;
+                            } else if (bola.x > DimensoesJogo.CAMPO_DIREITA - bola.tamanho) {
+                                bola.x = DimensoesJogo.CAMPO_DIREITA - bola.tamanho;
                                 bola.velX = -bola.velX;
                             }
                         }
@@ -135,8 +136,8 @@ public class Main extends JFrame {
                             acumuladorMilis = 0;
                             alphaTextoTempo = 0.25f;
 
-                            bola.x = 385;
-                            bola.y = 320;
+                            bola.x = DimensoesJogo.BOLA_INICIAL_X;
+                            bola.y = DimensoesJogo.BOLA_INICIAL_Y;
                             bola.velX = 0;
                             bola.velY = 0;
                         } else if (periodoAtual == 2) {
@@ -186,7 +187,10 @@ public class Main extends JFrame {
                         }
                     }
 
-                    boolean bolaNaAreaEsq = (bola.x >= 10 && bola.x <= 100 && bola.y >= 195 && bola.y <= 465);
+                    boolean bolaNaAreaEsq = (bola.x >= DimensoesJogo.AREA_ESQUERDA_X
+                            && bola.x <= DimensoesJogo.AREA_ESQUERDA_X + DimensoesJogo.AREA_LARGURA
+                            && bola.y >= DimensoesJogo.AREA_TOPO
+                            && bola.y <= DimensoesJogo.AREA_TOPO + DimensoesJogo.AREA_ALTURA);
 
                     if (bolaNaAreaEsq) {
                         if (cenario.goleiroEsquerda.x < bola.x) cenario.goleiroEsquerda.x += velocidadeGoleiro;
@@ -205,7 +209,10 @@ public class Main extends JFrame {
                         }
                     }
 
-                    boolean bolaNaAreaDir = (bola.x >= 685 && bola.x <= 775 && bola.y >= 195 && bola.y <= 465);
+                    boolean bolaNaAreaDir = (bola.x >= DimensoesJogo.AREA_DIREITA_X
+                            && bola.x <= DimensoesJogo.CAMPO_DIREITA
+                            && bola.y >= DimensoesJogo.AREA_TOPO
+                            && bola.y <= DimensoesJogo.AREA_TOPO + DimensoesJogo.AREA_ALTURA);
 
                     if (bolaNaAreaDir) {
                         if (cenario.goleiroDireita.x < bola.x) cenario.goleiroDireita.x += velocidadeGoleiro;
@@ -224,10 +231,10 @@ public class Main extends JFrame {
                         }
                     }
 
-                    if (cenario.goleiroEsquerda.x < 10) cenario.goleiroEsquerda.x = 10;
-                    if (cenario.goleiroEsquerda.x > 100) cenario.goleiroEsquerda.x = 100;
-                    if (cenario.goleiroDireita.x < 685) cenario.goleiroDireita.x = 685;
-                    if (cenario.goleiroDireita.x > 775) cenario.goleiroDireita.x = 775;
+                    if (cenario.goleiroEsquerda.x < DimensoesJogo.AREA_ESQUERDA_X) cenario.goleiroEsquerda.x = DimensoesJogo.AREA_ESQUERDA_X;
+                    if (cenario.goleiroEsquerda.x > DimensoesJogo.AREA_ESQUERDA_X + DimensoesJogo.AREA_LARGURA) cenario.goleiroEsquerda.x = DimensoesJogo.AREA_ESQUERDA_X + DimensoesJogo.AREA_LARGURA;
+                    if (cenario.goleiroDireita.x < DimensoesJogo.AREA_DIREITA_X) cenario.goleiroDireita.x = DimensoesJogo.AREA_DIREITA_X;
+                    if (cenario.goleiroDireita.x > DimensoesJogo.CAMPO_DIREITA) cenario.goleiroDireita.x = DimensoesJogo.CAMPO_DIREITA;
 
                     int oldBotX = cenario.linhaDireita.x;
                     int oldBotY = cenario.linhaDireita.y;
@@ -354,14 +361,14 @@ public class Main extends JFrame {
     }
 
     private void aplicarFisicaCurvaCenario() {
-        int raioCurva = 50;
+        int raioCurva = DimensoesJogo.RAIO_CANTO;
         double centroBolaX = bola.x + bola.tamanho / 2.0;
         double centroBolaY = bola.y + bola.tamanho / 2.0;
 
-        verificarCantoRedondo(centroBolaX, centroBolaY, 10 + raioCurva, 60 + raioCurva, raioCurva, "sup_esq");
-        verificarCantoRedondo(centroBolaX, centroBolaY, 10 + raioCurva, 600 - raioCurva, raioCurva, "inf_esq");
-        verificarCantoRedondo(centroBolaX, centroBolaY, 775 - raioCurva, 60 + raioCurva, raioCurva, "sup_dir");
-        verificarCantoRedondo(centroBolaX, centroBolaY, 775 - raioCurva, 600 - raioCurva, raioCurva, "inf_dir");
+        verificarCantoRedondo(centroBolaX, centroBolaY, DimensoesJogo.CAMPO_ESQUERDA + raioCurva, DimensoesJogo.CAMPO_TOPO + raioCurva, raioCurva, "sup_esq");
+        verificarCantoRedondo(centroBolaX, centroBolaY, DimensoesJogo.CAMPO_ESQUERDA + raioCurva, DimensoesJogo.CAMPO_FUNDO - raioCurva, raioCurva, "inf_esq");
+        verificarCantoRedondo(centroBolaX, centroBolaY, DimensoesJogo.CAMPO_DIREITA - raioCurva, DimensoesJogo.CAMPO_TOPO + raioCurva, raioCurva, "sup_dir");
+        verificarCantoRedondo(centroBolaX, centroBolaY, DimensoesJogo.CAMPO_DIREITA - raioCurva, DimensoesJogo.CAMPO_FUNDO - raioCurva, raioCurva, "inf_dir");
     }
 
     private void verificarCantoRedondo(double bx, double by, double cx, double cy, double raio, String canto) {
@@ -445,47 +452,48 @@ public class Main extends JFrame {
 
     private boolean isNaAreaProibida(Jogador j) {
         Rectangle rectJogador = new Rectangle(j.x, j.y, j.largura, j.altura);
-        Rectangle areaEsquerda = new Rectangle(10, 195, 90, 270);
-        Rectangle areaDireita = new Rectangle(685, 195, 90, 270);
+        Rectangle areaEsquerda = new Rectangle(DimensoesJogo.AREA_ESQUERDA_X, DimensoesJogo.AREA_TOPO, DimensoesJogo.AREA_LARGURA, DimensoesJogo.AREA_ALTURA);
+        Rectangle areaDireita = new Rectangle(DimensoesJogo.AREA_DIREITA_X, DimensoesJogo.AREA_TOPO, DimensoesJogo.AREA_LARGURA, DimensoesJogo.AREA_ALTURA);
         return rectJogador.intersects(areaEsquerda) || rectJogador.intersects(areaDireita);
     }
 
     private boolean estaForaDoCampo(Jogador j) {
-        if (j.x < 10 || j.x > (775 - j.largura) || j.y < 60 || j.y > (600 - j.altura)) {
+        if (j.x < DimensoesJogo.CAMPO_ESQUERDA || j.x > (DimensoesJogo.CAMPO_DIREITA - j.largura)
+                || j.y < DimensoesJogo.CAMPO_TOPO || j.y > (DimensoesJogo.CAMPO_FUNDO - j.altura)) {
             return true;
         }
 
-        int raioCurva = 50;
+        int raioCurva = DimensoesJogo.RAIO_CANTO;
         double centroJogadorX = j.x + j.largura / 2.0;
         double centroJogadorY = j.y + j.altura / 2.0;
         double limiteColisao = raioCurva - (j.largura / 2.0);
 
-        if (centroJogadorX < 10 + raioCurva && centroJogadorY < 60 + raioCurva) {
-            double dx = centroJogadorX - (10 + raioCurva);
-            double dy = centroJogadorY - (60 + raioCurva);
+        if (centroJogadorX < DimensoesJogo.CAMPO_ESQUERDA + raioCurva && centroJogadorY < DimensoesJogo.CAMPO_TOPO + raioCurva) {
+            double dx = centroJogadorX - (DimensoesJogo.CAMPO_ESQUERDA + raioCurva);
+            double dy = centroJogadorY - (DimensoesJogo.CAMPO_TOPO + raioCurva);
             if (Math.hypot(dx, dy) > limiteColisao) {
-                ajustarJogadorNaCurva(j, 10 + raioCurva, 60 + raioCurva, limiteColisao);
+                ajustarJogadorNaCurva(j, DimensoesJogo.CAMPO_ESQUERDA + raioCurva, DimensoesJogo.CAMPO_TOPO + raioCurva, limiteColisao);
             }
         }
-        else if (centroJogadorX < 10 + raioCurva && centroJogadorY > 600 - raioCurva) {
-            double dx = centroJogadorX - (10 + raioCurva);
-            double dy = centroJogadorY - (600 - raioCurva);
+        else if (centroJogadorX < DimensoesJogo.CAMPO_ESQUERDA + raioCurva && centroJogadorY > DimensoesJogo.CAMPO_FUNDO - raioCurva) {
+            double dx = centroJogadorX - (DimensoesJogo.CAMPO_ESQUERDA + raioCurva);
+            double dy = centroJogadorY - (DimensoesJogo.CAMPO_FUNDO - raioCurva);
             if (Math.hypot(dx, dy) > limiteColisao) {
-                ajustarJogadorNaCurva(j, 10 + raioCurva, 600 - raioCurva, limiteColisao);
+                ajustarJogadorNaCurva(j, DimensoesJogo.CAMPO_ESQUERDA + raioCurva, DimensoesJogo.CAMPO_FUNDO - raioCurva, limiteColisao);
             }
         }
-        else if (centroJogadorX > 775 - raioCurva && centroJogadorY < 60 + raioCurva) {
-            double dx = centroJogadorX - (775 - raioCurva);
-            double dy = centroJogadorY - (60 + raioCurva);
+        else if (centroJogadorX > DimensoesJogo.CAMPO_DIREITA - raioCurva && centroJogadorY < DimensoesJogo.CAMPO_TOPO + raioCurva) {
+            double dx = centroJogadorX - (DimensoesJogo.CAMPO_DIREITA - raioCurva);
+            double dy = centroJogadorY - (DimensoesJogo.CAMPO_TOPO + raioCurva);
             if (Math.hypot(dx, dy) > limiteColisao) {
-                ajustarJogadorNaCurva(j, 775 - raioCurva, 60 + raioCurva, limiteColisao);
+                ajustarJogadorNaCurva(j, DimensoesJogo.CAMPO_DIREITA - raioCurva, DimensoesJogo.CAMPO_TOPO + raioCurva, limiteColisao);
             }
         }
-        else if (centroJogadorX > 775 - raioCurva && centroJogadorY > 600 - raioCurva) {
-            double dx = centroJogadorX - (775 - raioCurva);
-            double dy = centroJogadorY - (600 - raioCurva);
+        else if (centroJogadorX > DimensoesJogo.CAMPO_DIREITA - raioCurva && centroJogadorY > DimensoesJogo.CAMPO_FUNDO - raioCurva) {
+            double dx = centroJogadorX - (DimensoesJogo.CAMPO_DIREITA - raioCurva);
+            double dy = centroJogadorY - (DimensoesJogo.CAMPO_FUNDO - raioCurva);
             if (Math.hypot(dx, dy) > limiteColisao) {
-                ajustarJogadorNaCurva(j, 775 - raioCurva, 600 - raioCurva, limiteColisao);
+                ajustarJogadorNaCurva(j, DimensoesJogo.CAMPO_DIREITA - raioCurva, DimensoesJogo.CAMPO_FUNDO - raioCurva, limiteColisao);
             }
         }
 

@@ -1,5 +1,6 @@
 import java.awt.Rectangle;
 
+
 public class Jogador {
     public int x;
     public int y;
@@ -15,15 +16,15 @@ public class Jogador {
     }
 
     public void subir() {
-        if (y > 60) y -= velocidade;
+        if (y > DimensoesJogo.CAMPO_TOPO) y -= velocidade;
     }
 
     public void descer() {
-        if (y < 600 - altura) y += velocidade;
+        if (y < DimensoesJogo.CAMPO_FUNDO - altura) y += velocidade;
     }
 
     public void esquerda() {
-        if (lado.equals("esquerda") && x > 10) {
+        if (lado.equals("esquerda") && x > DimensoesJogo.CAMPO_ESQUERDA) {
             x -= velocidade;
         } else if (lado.equals("direita") && x > 90) {
             x -= Math.min(velocidade, x - 90);
@@ -33,7 +34,7 @@ public class Jogador {
     public void direita() {
         if (lado.equals("esquerda") && x < 695 - largura) {
             x += velocidade;
-        } else if (lado.equals("direita") && x < 775 - largura) {
+        } else if (lado.equals("direita") && x < DimensoesJogo.CAMPO_DIREITA - largura) {
             x += velocidade;
         }
     }
@@ -61,16 +62,16 @@ public class Jogador {
             // Se a bola estiver no campo de ataque dela (Esquerda), ela avança, mas respeita o meio de campo
             if (bolaX < 400) {
                 // Segue o Y da bola
-                if (bolaY < centroJogadorY && y > 60) y -= velIA;
-                else if (bolaY > centroJogadorY && y < 600 - altura) y += velIA;
+                if (bolaY < centroJogadorY && y > DimensoesJogo.CAMPO_TOPO) y -= velIA;
+                else if (bolaY > centroJogadorY && y < DimensoesJogo.CAMPO_FUNDO - altura) y += velIA;
 
                 // Avança no X para atacar, mas não passa do meio de campo (400)
                 if (x > 410) x -= velIA;
             }
             // Se a bola estiver no campo de defesa dela (Direita), ela vai caçar a bola de verdade
             else {
-                if (bolaY < centroJogadorY && y > 60) y -= velIA;
-                else if (bolaY > centroJogadorY && y < 600 - altura) y += velIA;
+                if (bolaY < centroJogadorY && y > DimensoesJogo.CAMPO_TOPO) y -= velIA;
+                else if (bolaY > centroJogadorY && y < DimensoesJogo.CAMPO_FUNDO - altura) y += velIA;
 
                 // Persegue a bola no X, mas sem entrar na área do próprio goleiro (limite 690)
                 if (bolaX < centroJogadorX && x > 410) x -= velIA;
@@ -82,16 +83,16 @@ public class Jogador {
         else if (lado.equals("esquerda")) {
             // Se a bola estiver no campo de ataque dela (Direita)
             if (bolaX > 400) {
-                if (bolaY < centroJogadorY && y > 60) y -= velIA;
-                else if (bolaY > centroJogadorY && y < 600 - altura) y += velIA;
+                if (bolaY < centroJogadorY && y > DimensoesJogo.CAMPO_TOPO) y -= velIA;
+                else if (bolaY > centroJogadorY && y < DimensoesJogo.CAMPO_FUNDO - altura) y += velIA;
 
                 // Avança até o meio de campo no máximo (400)
                 if (x < 360) x += velIA;
             }
             // Se a bola estiver na defesa dela (Esquerda)
             else {
-                if (bolaY < centroJogadorY && y > 60) y -= velIA;
-                else if (bolaY > centroJogadorY && y < 600 - altura) y += velIA;
+                if (bolaY < centroJogadorY && y > DimensoesJogo.CAMPO_TOPO) y -= velIA;
+                else if (bolaY > centroJogadorY && y < DimensoesJogo.CAMPO_FUNDO - altura) y += velIA;
 
                 // Persegue a bola no X, respeitando a linha do seu goleiro (limite 90)
                 if (bolaX > centroJogadorX && x < 360) x += velIA;

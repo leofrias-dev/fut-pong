@@ -13,6 +13,7 @@ import java.awt.AlphaComposite;
 import java.awt.Composite;
 import java.awt.FontMetrics;
 
+
 public class Cenario extends JPanel {
 
     private Bola bola;
@@ -27,11 +28,6 @@ public class Cenario extends JPanel {
     public boolean desenharAuraBot = false;
 
     private boolean emPartida = false;
-
-    private final int botaoX = 312;
-    private final int botaoY = 280;
-    private final int botaoLargura = 160;
-    private final int botaoAltura = 50;
 
     public Jogador goleiroEsquerda;
     public Jogador linhaEsquerda;
@@ -52,10 +48,10 @@ public class Cenario extends JPanel {
         this.bola = bola;
         setBackground(Color.BLACK);
 
-        this.goleiroEsquerda = new Jogador(30, 280, "esquerda");
-        this.linhaEsquerda   = new Jogador(200, 280, "esquerda");
-        this.goleiroDireita  = new Jogador(740, 280, "direita");
-        this.linhaDireita    = new Jogador(570, 280, "direita");
+        this.goleiroEsquerda = new Jogador(DimensoesJogo.GOLEIRO_ESQUERDA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "esquerda");
+        this.linhaEsquerda   = new Jogador(DimensoesJogo.JOGADOR_ESQUERDA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "esquerda");
+        this.goleiroDireita  = new Jogador(DimensoesJogo.GOLEIRO_DIREITA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "direita");
+        this.linhaDireita    = new Jogador(DimensoesJogo.JOGADOR_DIREITA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "direita");
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -63,8 +59,8 @@ public class Cenario extends JPanel {
                 if (!emPartida) {
                     int mx = e.getX();
                     int my = e.getY();
-                    if (mx >= botaoX && mx <= botaoX + botaoLargura &&
-                            my >= botaoY && my <= botaoY + botaoAltura) {
+                    if (mx >= DimensoesJogo.BOTAO_JOGAR_X && mx <= DimensoesJogo.BOTAO_JOGAR_X + DimensoesJogo.BOTAO_JOGAR_LARGURA &&
+                            my >= DimensoesJogo.BOTAO_JOGAR_Y && my <= DimensoesJogo.BOTAO_JOGAR_Y + DimensoesJogo.BOTAO_JOGAR_ALTURA) {
                         emPartida = true;
                         repaint();
                     }
@@ -104,25 +100,25 @@ public class Cenario extends JPanel {
 
     public void verificarGol() {
         if (!emPartida) return;
-        if (bola.x <= 10 && bola.y >= 270 && bola.y <= 390) {
+        if (bola.x <= DimensoesJogo.CAMPO_ESQUERDA && bola.y >= DimensoesJogo.GOL_TOPO && bola.y <= DimensoesJogo.GOL_FUNDO) {
             golsBot++;
             resetarBola();
-        } else if (bola.x + bola.tamanho >= 775 && bola.y >= 270 && bola.y <= 390) {
+        } else if (bola.x + bola.tamanho >= DimensoesJogo.CAMPO_DIREITA && bola.y >= DimensoesJogo.GOL_TOPO && bola.y <= DimensoesJogo.GOL_FUNDO) {
             golsP1++;
             resetarBola();
         }
     }
 
     private void resetarBola() {
-        bola.x = 385;
-        bola.y = 320;
+        bola.x = DimensoesJogo.BOLA_INICIAL_X;
+        bola.y = DimensoesJogo.BOLA_INICIAL_Y;
         bola.velX = 0;
         bola.velY = 0;
 
-        goleiroEsquerda.x = 30;  goleiroEsquerda.y = 280;
-        linhaEsquerda.x = 200;   linhaEsquerda.y = 280;
-        goleiroDireita.x = 740;  goleiroDireita.y = 280;
-        linhaDireita.x = 570;    linhaDireita.y = 280;
+        goleiroEsquerda.x = DimensoesJogo.GOLEIRO_ESQUERDA_INICIAL_X;  goleiroEsquerda.y = DimensoesJogo.JOGADORES_INICIAL_Y;
+        linhaEsquerda.x = DimensoesJogo.JOGADOR_ESQUERDA_INICIAL_X;    linhaEsquerda.y = DimensoesJogo.JOGADORES_INICIAL_Y;
+        goleiroDireita.x = DimensoesJogo.GOLEIRO_DIREITA_INICIAL_X;    goleiroDireita.y = DimensoesJogo.JOGADORES_INICIAL_Y;
+        linhaDireita.x = DimensoesJogo.JOGADOR_DIREITA_INICIAL_X;      linhaDireita.y = DimensoesJogo.JOGADORES_INICIAL_Y;
 
         desenharAura = false;
         desenharAuraBot = false;
@@ -138,7 +134,7 @@ public class Cenario extends JPanel {
             g2d.setColor(Color.WHITE);
             g2d.setFont(new Font("Arial", Font.BOLD, 42));
             g2d.drawString("FUT PONG", 295, 200);
-            g2d.drawRect(botaoX, botaoY, botaoLargura, botaoAltura);
+            g2d.drawRect(DimensoesJogo.BOTAO_JOGAR_X, DimensoesJogo.BOTAO_JOGAR_Y, DimensoesJogo.BOTAO_JOGAR_LARGURA, DimensoesJogo.BOTAO_JOGAR_ALTURA);
             g2d.setFont(new Font("Arial", Font.BOLD, 20));
             g2d.drawString("JOGAR", 355, 312);
             return;
@@ -146,31 +142,31 @@ public class Cenario extends JPanel {
 
         g2d.setColor(Color.WHITE);
 
-        int raioCurva = 50;
+        int raioCurva = DimensoesJogo.RAIO_CANTO;
 
         // Linhas retas
-        g2d.drawLine(10 + raioCurva, 60, 775 - raioCurva, 60);
-        g2d.drawLine(10 + raioCurva, 600, 775 - raioCurva, 600);
+        g2d.drawLine(DimensoesJogo.CAMPO_ESQUERDA + raioCurva, DimensoesJogo.CAMPO_TOPO, DimensoesJogo.CAMPO_DIREITA - raioCurva, DimensoesJogo.CAMPO_TOPO);
+        g2d.drawLine(DimensoesJogo.CAMPO_ESQUERDA + raioCurva, DimensoesJogo.CAMPO_FUNDO, DimensoesJogo.CAMPO_DIREITA - raioCurva, DimensoesJogo.CAMPO_FUNDO);
 
-        g2d.drawLine(10, 60 + raioCurva, 10, 270);
-        g2d.drawLine(10, 390, 10, 600 - raioCurva);
+        g2d.drawLine(DimensoesJogo.CAMPO_ESQUERDA, DimensoesJogo.CAMPO_TOPO + raioCurva, DimensoesJogo.CAMPO_ESQUERDA, DimensoesJogo.GOL_TOPO);
+        g2d.drawLine(DimensoesJogo.CAMPO_ESQUERDA, DimensoesJogo.GOL_FUNDO, DimensoesJogo.CAMPO_ESQUERDA, DimensoesJogo.CAMPO_FUNDO - raioCurva);
 
-        g2d.drawLine(775, 60 + raioCurva, 775, 270);
-        g2d.drawLine(775, 390, 775, 600 - raioCurva);
+        g2d.drawLine(DimensoesJogo.CAMPO_DIREITA, DimensoesJogo.CAMPO_TOPO + raioCurva, DimensoesJogo.CAMPO_DIREITA, DimensoesJogo.GOL_TOPO);
+        g2d.drawLine(DimensoesJogo.CAMPO_DIREITA, DimensoesJogo.GOL_FUNDO, DimensoesJogo.CAMPO_DIREITA, DimensoesJogo.CAMPO_FUNDO - raioCurva);
 
         // Arcos das quinas curvas
-        g2d.drawArc(10, 60, raioCurva * 2, raioCurva * 2, 90, 90);
-        g2d.drawArc(10, 600 - (raioCurva * 2), raioCurva * 2, raioCurva * 2, 180, 90);
-        g2d.drawArc(775 - (raioCurva * 2), 60, raioCurva * 2, raioCurva * 2, 0, 90);
-        g2d.drawArc(775 - (raioCurva * 2), 600 - (raioCurva * 2), raioCurva * 2, raioCurva * 2, 270, 90);
+        g2d.drawArc(DimensoesJogo.CAMPO_ESQUERDA, DimensoesJogo.CAMPO_TOPO, raioCurva * 2, raioCurva * 2, 90, 90);
+        g2d.drawArc(DimensoesJogo.CAMPO_ESQUERDA, DimensoesJogo.CAMPO_FUNDO - (raioCurva * 2), raioCurva * 2, raioCurva * 2, 180, 90);
+        g2d.drawArc(DimensoesJogo.CAMPO_DIREITA - (raioCurva * 2), DimensoesJogo.CAMPO_TOPO, raioCurva * 2, raioCurva * 2, 0, 90);
+        g2d.drawArc(DimensoesJogo.CAMPO_DIREITA - (raioCurva * 2), DimensoesJogo.CAMPO_FUNDO - (raioCurva * 2), raioCurva * 2, raioCurva * 2, 270, 90);
 
         // Meio de campo e áreas
-        g2d.drawLine(392, 60, 392, 600);
+        g2d.drawLine(DimensoesJogo.CAMPO_MEIO_X, DimensoesJogo.CAMPO_TOPO, DimensoesJogo.CAMPO_MEIO_X, DimensoesJogo.CAMPO_FUNDO);
         g2d.drawOval(342, 280, 100, 100);
-        g2d.drawRect(10, 195, 90, 270);
-        g2d.drawRect(2, 270, 8, 120);
-        g2d.drawRect(685, 195, 90, 270);
-        g2d.drawRect(775, 270, 8, 120);
+        g2d.drawRect(DimensoesJogo.AREA_ESQUERDA_X, DimensoesJogo.AREA_TOPO, DimensoesJogo.AREA_LARGURA, DimensoesJogo.AREA_ALTURA);
+        g2d.drawRect(DimensoesJogo.CAMPO_ESQUERDA - DimensoesJogo.GOL_PROFUNDIDADE, DimensoesJogo.GOL_TOPO, DimensoesJogo.GOL_PROFUNDIDADE, DimensoesJogo.GOL_ALTURA);
+        g2d.drawRect(DimensoesJogo.AREA_DIREITA_X, DimensoesJogo.AREA_TOPO, DimensoesJogo.AREA_LARGURA, DimensoesJogo.AREA_ALTURA);
+        g2d.drawRect(DimensoesJogo.CAMPO_DIREITA, DimensoesJogo.GOL_TOPO, DimensoesJogo.GOL_PROFUNDIDADE, DimensoesJogo.GOL_ALTURA);
 
         // --- DESENHO DO TEXTO DE FUNDO (MARCA D'ÁGUA) ---
         if (alphaTextoFade > 0.0f) {
@@ -185,8 +181,8 @@ public class Cenario extends JPanel {
 
             // Centraliza o texto perfeitamente na tela
             FontMetrics fm = g2d.getFontMetrics();
-            int xTexto = (800 - fm.stringWidth(texto)) / 2;
-            int yTexto = (650 - fm.getHeight()) / 2 + fm.getAscent() - 20;
+            int xTexto = (DimensoesJogo.TELA_LARGURA - fm.stringWidth(texto)) / 2;
+            int yTexto = (DimensoesJogo.TELA_ALTURA - fm.getHeight()) / 2 + fm.getAscent() - 20;
 
             g2d.drawString(texto, xTexto, yTexto);
 
