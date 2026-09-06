@@ -64,7 +64,7 @@ public class Main extends JFrame {
                 if (c == KeyEvent.VK_SPACE && !pisaAtivo) {
                     pisaAtivo = true;
                     raioAura = 0;
-                    executarChutePlayer();
+                    executarPisaoPlayer();
                 }
             }
             @Override
@@ -82,35 +82,23 @@ public class Main extends JFrame {
 
                 // Se o jogo NÃO acabou, roda a física normalmente
                 if (!fimDeJogo) {
-                    int passosFisica = 4;
+                    double maiorVelocidade = Math.max(Math.abs(bola.velX), Math.abs(bola.velY));
+                    int passosFisica = Math.max(4, (int) Math.ceil(maiorVelocidade / (bola.tamanho / 3.0)));
                     for (int passo = 0; passo < passosFisica; passo++) {
                         bola.x += bola.velX / passosFisica;
                         bola.y += bola.velY / passosFisica;
 
-                        if (bola.y < DimensoesJogo.CAMPO_TOPO) {
-                            bola.y = DimensoesJogo.CAMPO_TOPO;
-                            bola.velY = -bola.velY;
-                        } else if (bola.y > DimensoesJogo.CAMPO_FUNDO - bola.tamanho) {
-                            bola.y = DimensoesJogo.CAMPO_FUNDO - bola.tamanho;
-                            bola.velY = -bola.velY;
-                        }
-
-                        if (bola.y < DimensoesJogo.ABERTURA_LATERAL_TOPO || bola.y > DimensoesJogo.ABERTURA_LATERAL_FUNDO) {
-                            if (bola.x < DimensoesJogo.CAMPO_ESQUERDA) {
-                                bola.x = DimensoesJogo.CAMPO_ESQUERDA;
-                                bola.velX = -bola.velX;
-                            } else if (bola.x > DimensoesJogo.CAMPO_DIREITA - bola.tamanho) {
-                                bola.x = DimensoesJogo.CAMPO_DIREITA - bola.tamanho;
-                                bola.velX = -bola.velX;
-                            }
-                        }
-
+                        aplicarLimitesRetosDaBola();
                         aplicarFisicaCurvaCenario();
 
-                        if (!pisaAtivo) aplicarColisaoFisica(cenario.linhaEsquerda, bola, 1.0);
+                        aplicarColisaoFisica(cenario.linhaEsquerda, bola, 1.0);
                         aplicarColisaoFisica(cenario.goleiroEsquerda, bola, 1.1);
                         aplicarColisaoFisica(cenario.goleiroDireita, bola, 1.1);
                         aplicarColisaoFisica(cenario.linhaDireita, bola, 1.0);
+
+                        // Uma colisão com jogador pode empurrar a bola para dentro da parede.
+                        aplicarLimitesRetosDaBola();
+                        aplicarFisicaCurvaCenario();
                     }
 
                     acumuladorMilis += 16 * 45;
@@ -282,12 +270,21 @@ public class Main extends JFrame {
                         }
                     }
 
+                    // Não deixa o bot continuar entrando na bola quando ela já está
+                    // encostada em uma parede. Isso evita que ela fique prensada.
+                    if (bolaPertoDaParede(bola) && jogadorEncostaNaBola(cenario.linhaDireita, bola)) {
+                        cenario.linhaDireita.x = oldBotX;
+                        cenario.linhaDireita.y = oldBotY;
+                    }
+
                     double distBotBola = Math.hypot(cenario.linhaDireita.x - bola.x, cenario.linhaDireita.y - bola.y);
                     double distBotPlayer = Math.hypot(cenario.linhaDireita.x - cenario.linhaEsquerda.x, cenario.linhaDireita.y - cenario.linhaEsquerda.y);
 
                     boolean bolaNoCanto = (bola.x < 45 || bola.x > 735 || bola.y < 95 || bola.y > 565);
 
-                    if (bolaNoCanto && distBotBola < 60) {
+                    double velocidadeBola = Math.hypot(bola.velX, bola.velY);
+
+                    if (bolaNoCanto && distBotBola < 60 && velocidadeBola < 2.0) {
                         bola.velX = (bola.x < 400) ? 5.0 : -5.0;
                         bola.velY = (bola.y < 300) ? 4.5 : -4.5;
                     }
@@ -360,6 +357,29 @@ public class Main extends JFrame {
         timer.start();
     }
 
+    private void aplicarLimitesRetosDaBola() {
+        if (bola.y < DimensoesJogo.CAMPO_TOPO) {
+            bola.y = DimensoesJogo.CAMPO_TOPO;
+            bola.velY = Math.abs(bola.velY);
+        } else if (bola.y > DimensoesJogo.CAMPO_FUNDO - bola.tamanho) {
+            bola.y = DimensoesJogo.CAMPO_FUNDO - bola.tamanho;
+            bola.velY = -Math.abs(bola.velY);
+        }
+
+        boolean foraDaAberturaDoGol = bola.y < DimensoesJogo.ABERTURA_LATERAL_TOPO
+                || bola.y > DimensoesJogo.ABERTURA_LATERAL_FUNDO;
+
+        if (foraDaAberturaDoGol) {
+            if (bola.x < DimensoesJogo.CAMPO_ESQUERDA) {
+                bola.x = DimensoesJogo.CAMPO_ESQUERDA;
+                bola.velX = Math.abs(bola.velX);
+            } else if (bola.x > DimensoesJogo.CAMPO_DIREITA - bola.tamanho) {
+                bola.x = DimensoesJogo.CAMPO_DIREITA - bola.tamanho;
+                bola.velX = -Math.abs(bola.velX);
+            }
+        }
+    }
+
     private void aplicarFisicaCurvaCenario() {
         int raioCurva = DimensoesJogo.RAIO_CANTO;
         double centroBolaX = bola.x + bola.tamanho / 2.0;
@@ -398,22 +418,39 @@ public class Main extends JFrame {
         }
     }
 
-    private void executarChutePlayer() {
+    private void executarPisaoPlayer() {
         double forcaImpacto = 16.0;
-        double dxBola = bola.x - cenario.linhaEsquerda.x;
-        double dyBola = bola.y - cenario.linhaEsquerda.y;
+        double centroPlayerX = cenario.linhaEsquerda.x + cenario.linhaEsquerda.largura / 2.0;
+        double centroPlayerY = cenario.linhaEsquerda.y + cenario.linhaEsquerda.altura / 2.0;
+        double centroBolaX = bola.x + bola.tamanho / 2.0;
+        double centroBolaY = bola.y + bola.tamanho / 2.0;
+
+        double dxBola = centroBolaX - centroPlayerX;
+        double dyBola = centroBolaY - centroPlayerY;
         double distBola = Math.hypot(dxBola, dyBola);
 
         if (distBola < 80) {
+            if (distBola < 0.0001) {
+                dxBola = 1;
+                dyBola = 0;
+                distBola = 1;
+            }
             bola.velX = (dxBola / distBola) * forcaImpacto;
             bola.velY = (dyBola / distBola) * forcaImpacto;
         }
 
-        double dxBot = cenario.linhaDireita.x - cenario.linhaEsquerda.x;
-        double dyBot = cenario.linhaDireita.y - cenario.linhaEsquerda.y;
+        double centroBotX = cenario.linhaDireita.x + cenario.linhaDireita.largura / 2.0;
+        double centroBotY = cenario.linhaDireita.y + cenario.linhaDireita.altura / 2.0;
+        double dxBot = centroBotX - centroPlayerX;
+        double dyBot = centroBotY - centroPlayerY;
         double distBot = Math.hypot(dxBot, dyBot);
 
         if (distBot < 80) {
+            if (distBot < 0.0001) {
+                dxBot = 1;
+                dyBot = 0;
+                distBot = 1;
+            }
             int novoX = cenario.linhaDireita.x + (int) ((dxBot / distBot) * 40);
             int novoY = cenario.linhaDireita.y + (int) ((dyBot / distBot) * 40);
             Jogador testeBot = new Jogador(novoX, novoY, "direita");
@@ -426,20 +463,37 @@ public class Main extends JFrame {
 
     private void executarChuteBot() {
         double forcaImpacto = 13.0;
-        double dxBola = bola.x - cenario.linhaDireita.x;
-        double dyBola = bola.y - cenario.linhaDireita.y;
+        double centroBotX = cenario.linhaDireita.x + cenario.linhaDireita.largura / 2.0;
+        double centroBotY = cenario.linhaDireita.y + cenario.linhaDireita.altura / 2.0;
+        double centroBolaX = bola.x + bola.tamanho / 2.0;
+        double centroBolaY = bola.y + bola.tamanho / 2.0;
+
+        double dxBola = centroBolaX - centroBotX;
+        double dyBola = centroBolaY - centroBotY;
         double distBola = Math.hypot(dxBola, dyBola);
 
         if (distBola < 80) {
+            if (distBola < 0.0001) {
+                dxBola = -1;
+                dyBola = 0;
+                distBola = 1;
+            }
             bola.velX = (dxBola / distBola) * forcaImpacto;
             bola.velY = (dyBola / distBola) * forcaImpacto;
         }
 
-        double dxPlayer = cenario.linhaEsquerda.x - cenario.linhaDireita.x;
-        double dyPlayer = cenario.linhaEsquerda.y - cenario.linhaDireita.y;
+        double centroPlayerX = cenario.linhaEsquerda.x + cenario.linhaEsquerda.largura / 2.0;
+        double centroPlayerY = cenario.linhaEsquerda.y + cenario.linhaEsquerda.altura / 2.0;
+        double dxPlayer = centroPlayerX - centroBotX;
+        double dyPlayer = centroPlayerY - centroBotY;
         double distPlayer = Math.hypot(dxPlayer, dyPlayer);
 
         if (distPlayer < 80) {
+            if (distPlayer < 0.0001) {
+                dxPlayer = -1;
+                dyPlayer = 0;
+                distPlayer = 1;
+            }
             int novoX = cenario.linhaEsquerda.x + (int) ((dxPlayer / distPlayer) * 40);
             int novoY = cenario.linhaEsquerda.y + (int) ((dyPlayer / distPlayer) * 40);
             Jogador testeP1 = new Jogador(novoX, novoY, "esquerda");
@@ -513,55 +567,96 @@ public class Main extends JFrame {
     }
 
     private void aplicarColisaoFisica(Jogador j, Bola b, double multiplicador) {
-        Rectangle rectBola = b.getLimites();
-        Rectangle rectJogador = new Rectangle(j.x, j.y, j.largura, j.altura);
+        double raioBola = b.tamanho / 2.0;
+        double centroBolaX = b.x + raioBola;
+        double centroBolaY = b.y + raioBola;
 
-        if (rectBola.intersects(rectJogador)) {
-            double centroBolaX = b.x + (b.tamanho / 2.0);
-            double centroBolaY = b.y + (b.tamanho / 2.0);
-            double centroJogadorX = j.x + (j.largura / 2.0);
-            double centroJogadorY = j.y + (j.altura / 2.0);
+        double pontoMaisProximoX = Math.max(j.x, Math.min(centroBolaX, j.x + j.largura));
+        double pontoMaisProximoY = Math.max(j.y, Math.min(centroBolaY, j.y + j.altura));
+        double dx = centroBolaX - pontoMaisProximoX;
+        double dy = centroBolaY - pontoMaisProximoY;
+        double distanciaQuadrada = dx * dx + dy * dy;
 
-            double dx = centroBolaX - centroJogadorX;
-            double dy = centroBolaY - centroJogadorY;
-            double distancia = Math.hypot(dx, dy);
-
-            if (distancia == 0) {
-                dx = 1;
-                dy = 1;
-                distancia = Math.hypot(dx, dy);
-            }
-
-            double dirX = dx / distancia;
-            double dirY = dy / distancia;
-            double forcaRebote = 5.5 * multiplicador;
-
-            b.velX = dirX * forcaRebote;
-            b.velY = dirY * forcaRebote;
-
-            if (b.x < 115) {
-                b.velX = Math.abs(b.velX) + 3.0;
-                b.x = j.x + j.largura + 8;
-            } else if (b.x > 685) {
-                b.velX = -Math.abs(b.velX) - 3.0;
-                b.x = j.x - b.tamanho - 8;
-            }
-
-            if (b.y < 90) {
-                b.velY = Math.abs(b.velY) + 2.0;
-                b.y = j.y + j.altura + 6;
-            } else if (b.y > 570) {
-                b.velY = -Math.abs(b.velY) - 2.0;
-                b.y = j.y - b.tamanho - 6;
-            }
-
-            if (b.x < 45 || b.x > 735) {
-                b.velY += (b.velY >= 0) ? 2.5 : -2.5;
-            }
-            if (b.y < 90 || b.y > 570) {
-                b.x += (b.velX >= 0) ? 2.0 : -2.0;
-            }
+        if (distanciaQuadrada > raioBola * raioBola) {
+            return;
         }
+
+        double normalX;
+        double normalY;
+        double penetracao;
+
+        if (distanciaQuadrada > 0.000001) {
+            double distancia = Math.sqrt(distanciaQuadrada);
+            normalX = dx / distancia;
+            normalY = dy / distancia;
+            penetracao = raioBola - distancia;
+        } else {
+            // O centro da bola entrou no retângulo do jogador. Empurra pela
+            // saída mais próxima, em vez de escolher uma direção aleatória.
+            double distanciaEsquerda = centroBolaX - j.x;
+            double distanciaDireita = j.x + j.largura - centroBolaX;
+            double distanciaTopo = centroBolaY - j.y;
+            double distanciaFundo = j.y + j.altura - centroBolaY;
+            double menorDistancia = Math.min(
+                    Math.min(distanciaEsquerda, distanciaDireita),
+                    Math.min(distanciaTopo, distanciaFundo)
+            );
+
+            if (menorDistancia == distanciaEsquerda) {
+                normalX = -1;
+                normalY = 0;
+            } else if (menorDistancia == distanciaDireita) {
+                normalX = 1;
+                normalY = 0;
+            } else if (menorDistancia == distanciaTopo) {
+                normalX = 0;
+                normalY = -1;
+            } else {
+                normalX = 0;
+                normalY = 1;
+            }
+            penetracao = raioBola + menorDistancia;
+        }
+
+        // Primeiro separa os objetos. Assim a mesma colisão não é repetida
+        // infinitamente enquanto a bola ainda está dentro do jogador.
+        b.x += normalX * (penetracao + 0.5);
+        b.y += normalY * (penetracao + 0.5);
+
+        double forcaRebote = 5.5 * multiplicador;
+        double velocidadeParaFora = b.velX * normalX + b.velY * normalY;
+
+        // Só acrescenta o impulso que falta. Um pisão forte não perde sua força.
+        if (velocidadeParaFora < forcaRebote) {
+            double impulso = forcaRebote - velocidadeParaFora;
+            b.velX += normalX * impulso;
+            b.velY += normalY * impulso;
+        }
+    }
+
+    private boolean bolaPertoDaParede(Bola b) {
+        double centroY = b.y + b.tamanho / 2.0;
+        boolean foraDaAberturaDoGol = centroY < DimensoesJogo.ABERTURA_LATERAL_TOPO
+                || centroY > DimensoesJogo.ABERTURA_LATERAL_FUNDO;
+
+        boolean pertoDaLateral = foraDaAberturaDoGol
+                && (b.x <= DimensoesJogo.CAMPO_ESQUERDA + 4
+                || b.x + b.tamanho >= DimensoesJogo.CAMPO_DIREITA - 4);
+        boolean pertoDaHorizontal = b.y <= DimensoesJogo.CAMPO_TOPO + 4
+                || b.y + b.tamanho >= DimensoesJogo.CAMPO_FUNDO - 4;
+
+        return pertoDaLateral || pertoDaHorizontal;
+    }
+
+    private boolean jogadorEncostaNaBola(Jogador j, Bola b) {
+        Rectangle areaDaBola = new Rectangle(
+                (int) Math.floor(b.x) - 2,
+                (int) Math.floor(b.y) - 2,
+                b.tamanho + 4,
+                b.tamanho + 4
+        );
+        Rectangle areaDoJogador = new Rectangle(j.x, j.y, j.largura, j.altura);
+        return areaDaBola.intersects(areaDoJogador);
     }
 
     private boolean checarColisaoJogadores(Jogador j1, Jogador j2) {
