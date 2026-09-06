@@ -108,10 +108,17 @@ public class Cenario extends JPanel {
 
     public void verificarGol() {
         if (!emPartida) return;
-        if (bola.x <= DimensoesJogo.CAMPO_ESQUERDA && bola.y >= DimensoesJogo.GOL_TOPO && bola.y <= DimensoesJogo.GOL_FUNDO) {
+
+        boolean bolaInteiraEntreAsTraves = bola.y >= DimensoesJogo.GOL_TOPO
+                && bola.y + bola.tamanho <= DimensoesJogo.GOL_FUNDO;
+
+        // A bola precisa atravessar a linha por completo para o gol valer.
+        if (bolaInteiraEntreAsTraves
+                && bola.x + bola.tamanho <= DimensoesJogo.CAMPO_ESQUERDA) {
             golsBot++;
             resetarBola();
-        } else if (bola.x + bola.tamanho >= DimensoesJogo.CAMPO_DIREITA && bola.y >= DimensoesJogo.GOL_TOPO && bola.y <= DimensoesJogo.GOL_FUNDO) {
+        } else if (bolaInteiraEntreAsTraves
+                && bola.x >= DimensoesJogo.CAMPO_DIREITA) {
             golsP1++;
             resetarBola();
         }
@@ -174,9 +181,9 @@ public class Cenario extends JPanel {
         g2d.drawLine(DimensoesJogo.CAMPO_MEIO_X, DimensoesJogo.CAMPO_TOPO, DimensoesJogo.CAMPO_MEIO_X, DimensoesJogo.CAMPO_FUNDO);
         g2d.drawOval(342, 280, 100, 100);
         g2d.drawRect(DimensoesJogo.AREA_ESQUERDA_X, DimensoesJogo.AREA_TOPO, DimensoesJogo.AREA_LARGURA, DimensoesJogo.AREA_ALTURA);
-        g2d.drawRect(DimensoesJogo.CAMPO_ESQUERDA - DimensoesJogo.GOL_PROFUNDIDADE, DimensoesJogo.GOL_TOPO, DimensoesJogo.GOL_PROFUNDIDADE, DimensoesJogo.GOL_ALTURA);
         g2d.drawRect(DimensoesJogo.AREA_DIREITA_X, DimensoesJogo.AREA_TOPO, DimensoesJogo.AREA_LARGURA, DimensoesJogo.AREA_ALTURA);
-        g2d.drawRect(DimensoesJogo.CAMPO_DIREITA, DimensoesJogo.GOL_TOPO, DimensoesJogo.GOL_PROFUNDIDADE, DimensoesJogo.GOL_ALTURA);
+        desenharGol(g2d, true);
+        desenharGol(g2d, false);
 
         // --- DESENHO DO TEXTO DE FUNDO (MARCA D'ÁGUA) ---
         if (alphaTextoFade > 0.0f) {
@@ -272,6 +279,44 @@ public class Cenario extends JPanel {
         }
 
         g2d.dispose();
+    }
+
+    private void desenharGol(Graphics2D g2d, boolean esquerda) {
+        int linhaDoGolX = esquerda
+                ? DimensoesJogo.CAMPO_ESQUERDA
+                : DimensoesJogo.CAMPO_DIREITA;
+        int fundoDaRedeX = esquerda
+                ? linhaDoGolX - DimensoesJogo.GOL_PROFUNDIDADE
+                : linhaDoGolX + DimensoesJogo.GOL_PROFUNDIDADE;
+        int inicioX = Math.min(linhaDoGolX, fundoDaRedeX);
+        int fimX = Math.max(linhaDoGolX, fundoDaRedeX);
+
+        // Malha da rede. A frente fica aberta para a bola entrar.
+        g2d.setColor(new Color(255, 255, 255, 80));
+        g2d.setStroke(new BasicStroke(1));
+        for (int x = inicioX + 9; x < fimX; x += 9) {
+            g2d.drawLine(x, DimensoesJogo.GOL_TOPO, x, DimensoesJogo.GOL_FUNDO);
+        }
+        for (int y = DimensoesJogo.GOL_TOPO + 10; y < DimensoesJogo.GOL_FUNDO; y += 10) {
+            g2d.drawLine(inicioX, y, fimX, y);
+        }
+
+        // Laterais e fundo da rede, sem fechar a boca do gol.
+        g2d.setColor(Color.WHITE);
+        g2d.setStroke(new BasicStroke(2));
+        g2d.drawLine(linhaDoGolX, DimensoesJogo.GOL_TOPO, fundoDaRedeX, DimensoesJogo.GOL_TOPO);
+        g2d.drawLine(linhaDoGolX, DimensoesJogo.GOL_FUNDO, fundoDaRedeX, DimensoesJogo.GOL_FUNDO);
+        g2d.drawLine(fundoDaRedeX, DimensoesJogo.GOL_TOPO, fundoDaRedeX, DimensoesJogo.GOL_FUNDO);
+
+        // Pequenos círculos deixam as duas traves bem visíveis.
+        int tamanhoTrave = DimensoesJogo.TRAVE_RAIO * 2;
+        g2d.fillOval(linhaDoGolX - tamanhoTrave / 2,
+                DimensoesJogo.GOL_TOPO - tamanhoTrave / 2,
+                tamanhoTrave, tamanhoTrave);
+        g2d.fillOval(linhaDoGolX - tamanhoTrave / 2,
+                DimensoesJogo.GOL_FUNDO - tamanhoTrave / 2,
+                tamanhoTrave, tamanhoTrave);
+        g2d.setStroke(new BasicStroke(1));
     }
 
     // --- NOVO MÉTODO ADICIONADO AQUI ---

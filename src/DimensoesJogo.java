@@ -19,11 +19,12 @@ public final class DimensoesJogo {
     public static final int GOL_TOPO = 270;
     public static final int GOL_FUNDO = 390;
     public static final int GOL_ALTURA = GOL_FUNDO - GOL_TOPO;
-    public static final int GOL_PROFUNDIDADE = 8;
+    public static final int GOL_PROFUNDIDADE = 45;
+    public static final int TRAVE_RAIO = 3;
 
-    // Mantém o comportamento atual. Essa abertura será ajustada no próximo passo.
-    public static final int ABERTURA_LATERAL_TOPO = 240;
-    public static final int ABERTURA_LATERAL_FUNDO = 420;
+    // A abertura física e o gol desenhado precisam ter exatamente o mesmo tamanho.
+    public static final int ABERTURA_LATERAL_TOPO = GOL_TOPO;
+    public static final int ABERTURA_LATERAL_FUNDO = GOL_FUNDO;
 
     public static final int AREA_TOPO = 195;
     public static final int AREA_ALTURA = 270;
