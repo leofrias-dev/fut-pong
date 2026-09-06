@@ -44,6 +44,14 @@ public class Cenario extends JPanel {
     private int periodoTextoFade = 1;
     private float alphaTextoFade = 0.25f;
 
+    private int deslocamentoCampoX() {
+        return (getWidth() - DimensoesJogo.CAMPO_LARGURA) / 2 - DimensoesJogo.CAMPO_ESQUERDA;
+    }
+
+    private int deslocamentoCampoY() {
+        return (getHeight() - DimensoesJogo.CAMPO_ALTURA) / 2 - DimensoesJogo.CAMPO_TOPO;
+    }
+
     public Cenario(Bola bola) {
         this.bola = bola;
         setBackground(Color.BLACK);
@@ -57,8 +65,8 @@ public class Cenario extends JPanel {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (!emPartida) {
-                    int mx = e.getX();
-                    int my = e.getY();
+                    int mx = e.getX() - deslocamentoCampoX();
+                    int my = e.getY() - deslocamentoCampoY();
                     if (mx >= DimensoesJogo.BOTAO_JOGAR_X && mx <= DimensoesJogo.BOTAO_JOGAR_X + DimensoesJogo.BOTAO_JOGAR_LARGURA &&
                             my >= DimensoesJogo.BOTAO_JOGAR_Y && my <= DimensoesJogo.BOTAO_JOGAR_Y + DimensoesJogo.BOTAO_JOGAR_ALTURA) {
                         emPartida = true;
@@ -127,8 +135,9 @@ public class Cenario extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
+        Graphics2D g2d = (Graphics2D) g.create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.translate(deslocamentoCampoX(), deslocamentoCampoY());
 
         if (!emPartida) {
             g2d.setColor(Color.WHITE);
@@ -137,6 +146,7 @@ public class Cenario extends JPanel {
             g2d.drawRect(DimensoesJogo.BOTAO_JOGAR_X, DimensoesJogo.BOTAO_JOGAR_Y, DimensoesJogo.BOTAO_JOGAR_LARGURA, DimensoesJogo.BOTAO_JOGAR_ALTURA);
             g2d.setFont(new Font("Arial", Font.BOLD, 20));
             g2d.drawString("JOGAR", 355, 312);
+            g2d.dispose();
             return;
         }
 
@@ -181,8 +191,9 @@ public class Cenario extends JPanel {
 
             // Centraliza o texto perfeitamente na tela
             FontMetrics fm = g2d.getFontMetrics();
-            int xTexto = (DimensoesJogo.TELA_LARGURA - fm.stringWidth(texto)) / 2;
-            int yTexto = (DimensoesJogo.TELA_ALTURA - fm.getHeight()) / 2 + fm.getAscent() - 20;
+            int xTexto = DimensoesJogo.CAMPO_MEIO_X - fm.stringWidth(texto) / 2;
+            int centroCampoY = (DimensoesJogo.CAMPO_TOPO + DimensoesJogo.CAMPO_FUNDO) / 2;
+            int yTexto = centroCampoY - fm.getHeight() / 2 + fm.getAscent() - 20;
 
             g2d.drawString(texto, xTexto, yTexto);
 
@@ -259,6 +270,8 @@ public class Cenario extends JPanel {
 
             g2d.setTransform(oldTransform);
         }
+
+        g2d.dispose();
     }
 
     // --- NOVO MÉTODO ADICIONADO AQUI ---

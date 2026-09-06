@@ -11,6 +11,8 @@ public final class DimensoesJogo {
     public static final int CAMPO_DIREITA = 775;
     public static final int CAMPO_TOPO = 60;
     public static final int CAMPO_FUNDO = 600;
+    public static final int CAMPO_LARGURA = CAMPO_DIREITA - CAMPO_ESQUERDA;
+    public static final int CAMPO_ALTURA = CAMPO_FUNDO - CAMPO_TOPO;
     public static final int CAMPO_MEIO_X = 392;
     public static final int RAIO_CANTO = 50;
 
