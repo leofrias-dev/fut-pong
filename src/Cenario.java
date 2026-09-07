@@ -220,24 +220,10 @@ public class Cenario extends JPanel {
             g2d.drawOval(auraBotX - auraBotRaio + 12, auraBotY - auraBotRaio + 30, auraBotRaio * 2, auraBotRaio * 2);
         }
 
+        desenharPlacar(g2d);
+
         g2d.setStroke(new BasicStroke(1));
         g2d.setColor(Color.WHITE);
-
-        // --- EXIBIÇÃO DINÂMICA DO PLACAR E CRONÔMETRO ---
-        g2d.setFont(new Font("Arial", Font.BOLD, 22));
-        g2d.drawString("FUT PONG", 50, 40);
-
-        if (partidaTerminada) {
-            g2d.drawString("FIM DE JOGO", 600, 40);
-            String textoPlacar = "|    P1 - " + golsP1 + " / " + golsBot + " - BOT    |";
-            g2d.drawString(textoPlacar, 285, 40);
-        } else {
-            String tempoFormatado = String.format("%02d:%02d", minPlacar, segPlacar);
-            g2d.drawString(periodoPlacar + "° | " + tempoFormatado, 640, 40);
-
-            String textoPlacar = "|    P1 - " + golsP1 + " / " + golsBot + " - BOT    |";
-            g2d.drawString(textoPlacar, 285, 40);
-        }
 
         // Desenha a bola
         g2d.fillOval((int)bola.x, (int)bola.y, bola.tamanho, bola.tamanho);
@@ -279,6 +265,67 @@ public class Cenario extends JPanel {
         }
 
         g2d.dispose();
+    }
+
+    private void desenharPlacar(Graphics2D g2d) {
+        Color fundoPainel = new Color(17, 21, 24);
+        Color bordaPainel = new Color(58, 68, 73);
+        Color textoSecundario = new Color(160, 171, 176);
+        Color destaque = new Color(60, 220, 145);
+
+        desenharPainelPlacar(g2d, 10, 8, 180, 42, fundoPainel, bordaPainel);
+        desenharPainelPlacar(g2d, 212, 5, 366, 48, fundoPainel, destaque);
+        desenharPainelPlacar(g2d, 600, 8, 175, 42, fundoPainel, bordaPainel);
+
+        // Identidade do jogo.
+        g2d.setColor(destaque);
+        g2d.fillRoundRect(22, 19, 4, 20, 4, 4);
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 18));
+        desenharTextoCentralizado(g2d, "FUT PONG", 106, 36);
+
+        // Resultado: os nomes ficam separados dos números para facilitar a leitura.
+        g2d.setColor(textoSecundario);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 10));
+        desenharTextoCentralizado(g2d, "P1", 307, 19);
+        desenharTextoCentralizado(g2d, "BOT", 483, 19);
+
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 25));
+        desenharTextoCentralizado(g2d, String.valueOf(golsP1), 307, 44);
+        desenharTextoCentralizado(g2d, "-", 395, 42);
+        desenharTextoCentralizado(g2d, String.valueOf(golsBot), 483, 44);
+
+        // Situação da partida e cronômetro.
+        if (partidaTerminada) {
+            g2d.setColor(destaque);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 14));
+            desenharTextoCentralizado(g2d, "FIM DE JOGO", 687, 35);
+        } else {
+            String tempoFormatado = String.format("%02d:%02d", minPlacar, segPlacar);
+            g2d.setColor(textoSecundario);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 9));
+            desenharTextoCentralizado(g2d, periodoPlacar + "º TEMPO", 687, 21);
+
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 18));
+            desenharTextoCentralizado(g2d, tempoFormatado, 687, 42);
+        }
+    }
+
+    private void desenharPainelPlacar(Graphics2D g2d, int x, int y, int largura, int altura,
+                                      Color fundo, Color borda) {
+        g2d.setColor(fundo);
+        g2d.fillRoundRect(x, y, largura, altura, 14, 14);
+
+        g2d.setColor(borda);
+        g2d.setStroke(new BasicStroke(1.2f));
+        g2d.drawRoundRect(x, y, largura, altura, 14, 14);
+    }
+
+    private void desenharTextoCentralizado(Graphics2D g2d, String texto, int centroX, int linhaBase) {
+        FontMetrics metricas = g2d.getFontMetrics();
+        g2d.drawString(texto, centroX - metricas.stringWidth(texto) / 2, linhaBase);
     }
 
     private void desenharGol(Graphics2D g2d, boolean esquerda) {

@@ -2,6 +2,9 @@ import java.awt.Rectangle;
 
 
 public class Bola {
+    private static final double FATOR_ARRASTO = 0.99;
+    private static final double VELOCIDADE_MINIMA = 0.12;
+
     public double x = DimensoesJogo.BOLA_INICIAL_X;
     public double y = DimensoesJogo.BOLA_INICIAL_Y;
     public double velX = 0;
@@ -12,9 +15,7 @@ public class Bola {
         x += velX;
         y += velY;
 
-        // Aplica o atrito gradual para a bola não rolar eternamente
-        velX *= 0.99;
-        velY *= 0.99;
+        aplicarArrasto();
 
         // --- COLISÃO E TRAVA NOS LIMITES SUPERIOR E INFERIOR ---
         if (y < DimensoesJogo.CAMPO_TOPO) {
@@ -53,5 +54,16 @@ public class Bola {
 
     public Rectangle getLimites() {
         return new Rectangle((int)x, (int)y, tamanho, tamanho);
+    }
+
+    public void aplicarArrasto() {
+        velX *= FATOR_ARRASTO;
+        velY *= FATOR_ARRASTO;
+
+        // Evita que velocidades minúsculas mantenham a bola se mexendo para sempre.
+        if (Math.hypot(velX, velY) < VELOCIDADE_MINIMA) {
+            velX = 0;
+            velY = 0;
+        }
     }
 }
