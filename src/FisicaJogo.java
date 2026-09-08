@@ -446,6 +446,47 @@ public class FisicaJogo {
         return areaDaBola.intersects(areaDoJogador);
     }
 
+    // Cada corpo resolve seu próprio movimento. Um passo bloqueado não desfaz
+    // o deslocamento do outro jogador, e a parte livre da diagonal é aproveitada.
+    public boolean moverJogadorComColisao(Jogador jogador, Jogador obstaculo,
+                                          int deslocamentoX, int deslocamentoY) {
+        int inicioX = jogador.x;
+        int inicioY = jogador.y;
+        int passos = Math.max(Math.abs(deslocamentoX), Math.abs(deslocamentoY));
+        int anteriorX = 0;
+        int anteriorY = 0;
+
+        for (int passo = 1; passo <= passos; passo++) {
+            int acumuladoX = (int) Math.round(deslocamentoX * (double) passo / passos);
+            int acumuladoY = (int) Math.round(deslocamentoY * (double) passo / passos);
+            int passoX = acumuladoX - anteriorX;
+            int passoY = acumuladoY - anteriorY;
+            anteriorX = acumuladoX;
+            anteriorY = acumuladoY;
+
+            if (!tentarMoverJogador(jogador, obstaculo, passoX, passoY)) {
+                if (passoX != 0) tentarMoverJogador(jogador, obstaculo, passoX, 0);
+                if (passoY != 0) tentarMoverJogador(jogador, obstaculo, 0, passoY);
+            }
+        }
+        return jogador.x != inicioX || jogador.y != inicioY;
+    }
+
+    private boolean tentarMoverJogador(Jogador jogador, Jogador obstaculo, int dx, int dy) {
+        if (dx == 0 && dy == 0) return false;
+        Jogador tentativa = new Jogador(jogador.x + dx, jogador.y + dy, jogador.lado);
+        tentativa.largura = jogador.largura;
+        tentativa.altura = jogador.altura;
+        // estaForaDoCampo também ajusta a posição nas quinas arredondadas.
+        if (estaForaDoCampo(tentativa) || isNaAreaProibida(tentativa)
+                || checarColisaoJogadores(tentativa, obstaculo)) {
+            return false;
+        }
+        jogador.x = tentativa.x;
+        jogador.y = tentativa.y;
+        return true;
+    }
+
     public boolean checarColisaoJogadores(Jogador jogadorA, Jogador jogadorB) {
         Rectangle areaA = new Rectangle(
                 jogadorA.x, jogadorA.y, jogadorA.largura, jogadorA.altura);

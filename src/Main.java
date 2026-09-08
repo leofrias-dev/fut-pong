@@ -1,7 +1,11 @@
 import javax.swing.JFrame;
 import javax.swing.Timer;
+import javax.swing.SwingUtilities;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.geom.Rectangle2D;
 
 
 public class Main extends JFrame {
@@ -26,6 +30,7 @@ public class Main extends JFrame {
     private int velocidadeLinhaDireita = 4; // Bot mais rápido, mas menor que a sua (era 3)
 
     private int tempoDesvioBot = 0;
+    private int direcaoDesvioX = 0;
     private int direcaoDesvioY = 0;
     private int tempoRecuoParedeBot = 0;
 
@@ -55,7 +60,7 @@ public class Main extends JFrame {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (fimDeJogo) return;
+                if (fimDeJogo || !cenario.jogoRodando()) return;
 
                 int c = e.getKeyCode();
                 if (c == KeyEvent.VK_W) teclaW = true;
@@ -76,6 +81,13 @@ public class Main extends JFrame {
                 if (c == KeyEvent.VK_A) teclaA = false;
                 if (c == KeyEvent.VK_S) teclaS = false;
                 if (c == KeyEvent.VK_D) teclaD = false;
+            }
+        });
+
+        addWindowFocusListener(new WindowAdapter() {
+            @Override
+            public void windowLostFocus(WindowEvent e) {
+                limparTeclas();
             }
         });
 
@@ -141,27 +153,10 @@ public class Main extends JFrame {
 
                     if (cooldownChuteBot > 0) cooldownChuteBot--;
 
-                    int oldX = cenario.linhaEsquerda.x;
-                    int oldY = cenario.linhaEsquerda.y;
-
-                    if (teclaW) cenario.linhaEsquerda.y -= velocidadeSeuJogador;
-                    if (teclaS) cenario.linhaEsquerda.y += velocidadeSeuJogador;
-                    if (teclaA) cenario.linhaEsquerda.x -= velocidadeSeuJogador;
-                    if (teclaD) cenario.linhaEsquerda.x += velocidadeSeuJogador;
-
-                    if (fisicaJogo.estaForaDoCampo(cenario.linhaEsquerda)
-                            || fisicaJogo.isNaAreaProibida(cenario.linhaEsquerda)) {
-                        cenario.linhaEsquerda.x = oldX;
-                        cenario.linhaEsquerda.y = oldY;
-                    }
-
-                    if (fisicaJogo.isNaAreaProibida(cenario.linhaEsquerda)) {
-                        if (cenario.linhaEsquerda.x < 400) {
-                            cenario.linhaEsquerda.x = 105;
-                        } else {
-                            cenario.linhaEsquerda.x = 680 - cenario.linhaEsquerda.largura;
-                        }
-                    }
+                    int movimentoPlayerX = ((teclaD ? 1 : 0) - (teclaA ? 1 : 0)) * velocidadeSeuJogador;
+                    int movimentoPlayerY = ((teclaS ? 1 : 0) - (teclaW ? 1 : 0)) * velocidadeSeuJogador;
+                    fisicaJogo.moverJogadorComColisao(cenario.linhaEsquerda, cenario.linhaDireita,
+                            movimentoPlayerX, movimentoPlayerY);
 
                     boolean bolaNaAreaEsq = (bola.x >= DimensoesJogo.AREA_ESQUERDA_X
                             && bola.x <= DimensoesJogo.AREA_ESQUERDA_X + DimensoesJogo.AREA_LARGURA
@@ -276,23 +271,39 @@ public class Main extends JFrame {
                                                 - cenario.linhaDireita.altura / 2.0)
                         );
                         tempoDesvioBot = 0;
-                    } else if (tempoDesvioBot <= 0
-                            && jogadorBloqueiaCaminhoDoBot(alvoBolaX, alvoBolaY)) {
-                        iniciarDesvioBot();
+                    } else {
+                        if (!jogadorBloqueiaCaminhoDoBot(alvoBolaX, alvoBolaY)) {
+                            tempoDesvioBot = 0;
+                        } else if (tempoDesvioBot <= 0) {
+                            iniciarDesvioBot();
+                        }
                     }
 
                     if (tempoRecuoParedeBot <= 0
                             && !goleiroDireitoTemPrioridade
                             && tempoDesvioBot > 0) {
-                        double centroPlayerY = cenario.linhaEsquerda.y + cenario.linhaEsquerda.altura / 2.0;
-                        double distanciaParaContornar = (cenario.linhaEsquerda.altura
-                                + cenario.linhaDireita.altura) / 2.0 + 25;
-
-                        // O ponto de desvio continua na direção da bola, mas passa
-                        // por cima ou por baixo do jogador que fechou o caminho.
-                        alvoMovimentoY = centroPlayerY
-                                + direcaoDesvioY * distanciaParaContornar
-                                - cenario.linhaDireita.altura / 2.0;
+                        // Contorna pela lateral quando o obstáculo está acima/abaixo,
+                        // ou por cima/baixo quando os corpos estão lado a lado.
+                        if (direcaoDesvioX != 0) {
+                            alvoMovimentoX = cenario.linhaEsquerda.x
+                                    + cenario.linhaEsquerda.largura / 2.0
+                                    + direcaoDesvioX * ((cenario.linhaEsquerda.largura
+                                    + cenario.linhaDireita.largura) / 2.0 + 25)
+                                    - cenario.linhaDireita.largura / 2.0;
+                            alvoMovimentoY = cenario.linhaEsquerda.y
+                                    + (cenario.linhaEsquerda.altura - cenario.linhaDireita.altura) / 2.0;
+                        } else {
+                            alvoMovimentoY = cenario.linhaEsquerda.y
+                                    + cenario.linhaEsquerda.altura / 2.0
+                                    + direcaoDesvioY * ((cenario.linhaEsquerda.altura
+                                    + cenario.linhaDireita.altura) / 2.0 + 25)
+                                    - cenario.linhaDireita.altura / 2.0;
+                            alvoMovimentoX = cenario.linhaEsquerda.x
+                                    + (cenario.linhaEsquerda.largura - cenario.linhaDireita.largura) / 2.0;
+                        }
+                        alvoMovimentoX = Math.max(DimensoesJogo.CAMPO_ESQUERDA,
+                                Math.min(DimensoesJogo.CAMPO_DIREITA - cenario.linhaDireita.largura,
+                                        alvoMovimentoX));
                         alvoMovimentoY = Math.max(
                                 DimensoesJogo.CAMPO_TOPO,
                                 Math.min(DimensoesJogo.CAMPO_FUNDO - cenario.linhaDireita.altura,
@@ -304,14 +315,6 @@ public class Main extends JFrame {
 
                     moverBotEmDirecao(alvoMovimentoX, alvoMovimentoY, velocidadeMovimentoBot);
 
-                    if (fisicaJogo.isNaAreaProibida(cenario.linhaDireita)) {
-                        if (cenario.linhaDireita.x > 400) {
-                            cenario.linhaDireita.x = 680 - cenario.linhaDireita.largura;
-                        } else {
-                            cenario.linhaDireita.x = 105;
-                        }
-                    }
-
                     // Não deixa o bot continuar entrando na bola quando ela já está
                     // encostada em uma parede. Isso evita que ela fique prensada.
                     if (fisicaJogo.bolaPertoDaParede(bola)
@@ -321,7 +324,9 @@ public class Main extends JFrame {
                         tempoRecuoParedeBot = 35;
                     }
 
-                    double distBotBola = Math.hypot(cenario.linhaDireita.x - bola.x, cenario.linhaDireita.y - bola.y);
+                    double distBotBola = Math.hypot(
+                            cenario.linhaDireita.x + cenario.linhaDireita.largura / 2.0 - bola.x - bola.tamanho / 2.0,
+                            cenario.linhaDireita.y + cenario.linhaDireita.altura / 2.0 - bola.y - bola.tamanho / 2.0);
                     double distBotPlayer = Math.hypot(cenario.linhaDireita.x - cenario.linhaEsquerda.x, cenario.linhaDireita.y - cenario.linhaEsquerda.y);
 
                     boolean bolaNoCanto = (bola.x < 45 || bola.x > 735 || bola.y < 95 || bola.y > 565);
@@ -343,22 +348,11 @@ public class Main extends JFrame {
                             cooldownChuteBot = 90;
                             tempoRecuoParedeBot = 35;
                             executarPisaoEscapeParedeBot();
-                        } else if (!bolaNoCanto && (distBotBola < 55 || distBotPlayer < 75)) {
+                        } else if ((!bolaNoCanto && distBotBola < 55) || distBotPlayer < 75) {
                             botChutando = true;
                             raioAuraBot = 0;
                             cooldownChuteBot = 90;
                             executarChuteBot();
-                        }
-                    }
-
-                    if (fisicaJogo.checarColisaoJogadores(
-                            cenario.linhaEsquerda, cenario.linhaDireita)) {
-                        cenario.linhaEsquerda.x = oldX;
-                        cenario.linhaEsquerda.y = oldY;
-                        cenario.linhaDireita.x = oldBotX;
-                        cenario.linhaDireita.y = oldBotY;
-                        if (tempoDesvioBot <= 0) {
-                            iniciarDesvioBot();
                         }
                     }
 
@@ -397,6 +391,16 @@ public class Main extends JFrame {
                         segundosVirtuais = 0;
                         acumuladorMilis = 0;
                         alphaTextoTempo = 0.25f;
+                        limparTeclas();
+                        pisaAtivo = false;
+                        botChutando = false;
+                        raioAura = 0;
+                        raioAuraBot = 0;
+                        cooldownChuteBot = 0;
+                        tempoDesvioBot = 0;
+                        direcaoDesvioX = 0;
+                        direcaoDesvioY = 0;
+                        tempoRecuoParedeBot = 0;
 
                         // Envia comando pro Cenário voltar pra tela de Início
                         cenario.resetarParaMenu();
@@ -445,13 +449,8 @@ public class Main extends JFrame {
                 dyBot = 0;
                 distBot = 1;
             }
-            int novoX = cenario.linhaDireita.x + (int) ((dxBot / distBot) * 40);
-            int novoY = cenario.linhaDireita.y + (int) ((dyBot / distBot) * 40);
-            Jogador testeBot = new Jogador(novoX, novoY, "direita");
-            if (!fisicaJogo.estaForaDoCampo(testeBot)) {
-                cenario.linhaDireita.x = novoX;
-                cenario.linhaDireita.y = novoY;
-            }
+            fisicaJogo.moverJogadorComColisao(cenario.linhaDireita, cenario.linhaEsquerda,
+                    (int) ((dxBot / distBot) * 40), (int) ((dyBot / distBot) * 40));
         }
     }
 
@@ -488,13 +487,8 @@ public class Main extends JFrame {
                 dyPlayer = 0;
                 distPlayer = 1;
             }
-            int novoX = cenario.linhaEsquerda.x + (int) ((dxPlayer / distPlayer) * 40);
-            int novoY = cenario.linhaEsquerda.y + (int) ((dyPlayer / distPlayer) * 40);
-            Jogador testeP1 = new Jogador(novoX, novoY, "esquerda");
-            if (!fisicaJogo.estaForaDoCampo(testeP1)) {
-                cenario.linhaEsquerda.x = novoX;
-                cenario.linhaEsquerda.y = novoY;
-            }
+            fisicaJogo.moverJogadorComColisao(cenario.linhaEsquerda, cenario.linhaDireita,
+                    (int) ((dxPlayer / distPlayer) * 40), (int) ((dyPlayer / distPlayer) * 40));
         }
     }
 
@@ -555,80 +549,55 @@ public class Main extends JFrame {
             else passoY = dy > 0 ? 1 : -1;
         }
 
-        int destinoX = cenario.linhaDireita.x + passoX;
-        int destinoY = cenario.linhaDireita.y + passoY;
-
-        // Primeiro tenta o passo diagonal completo.
-        Jogador tentativaDiagonal = new Jogador(destinoX, destinoY, "direita");
-        if (!fisicaJogo.estaForaDoCampo(tentativaDiagonal)
-                && !fisicaJogo.isNaAreaProibida(tentativaDiagonal)) {
-            cenario.linhaDireita.x = tentativaDiagonal.x;
-            cenario.linhaDireita.y = tentativaDiagonal.y;
-            return;
-        }
-
-        // Perto dos limites, tenta aproveitar a parte livre do movimento.
-        Jogador tentativaX = new Jogador(destinoX, cenario.linhaDireita.y, "direita");
-        if (!fisicaJogo.estaForaDoCampo(tentativaX)
-                && !fisicaJogo.isNaAreaProibida(tentativaX)) {
-            cenario.linhaDireita.x = tentativaX.x;
-            cenario.linhaDireita.y = tentativaX.y;
-        }
-
-        Jogador tentativaY = new Jogador(cenario.linhaDireita.x, destinoY, "direita");
-        if (!fisicaJogo.estaForaDoCampo(tentativaY)
-                && !fisicaJogo.isNaAreaProibida(tentativaY)) {
-            cenario.linhaDireita.x = tentativaY.x;
-            cenario.linhaDireita.y = tentativaY.y;
-        }
+        fisicaJogo.moverJogadorComColisao(cenario.linhaDireita, cenario.linhaEsquerda,
+                passoX, passoY);
     }
 
     private boolean jogadorBloqueiaCaminhoDoBot(double alvoX, double alvoY) {
-        double botCentroX = cenario.linhaDireita.x + cenario.linhaDireita.largura / 2.0;
-        double botCentroY = cenario.linhaDireita.y + cenario.linhaDireita.altura / 2.0;
-        double playerCentroX = cenario.linhaEsquerda.x + cenario.linhaEsquerda.largura / 2.0;
-        double playerCentroY = cenario.linhaEsquerda.y + cenario.linhaEsquerda.altura / 2.0;
+        Jogador bot = cenario.linhaDireita;
+        Jogador player = cenario.linhaEsquerda;
+        if (Math.hypot(bot.x - player.x, bot.y - player.y) > 180) return false;
 
-        double rotaX = alvoX - cenario.linhaDireita.x;
-        double rotaY = alvoY - cenario.linhaDireita.y;
-        double comprimentoQuadrado = rotaX * rotaX + rotaY * rotaY;
-        if (comprimentoQuadrado < 1.0) {
-            return false;
-        }
-
-        double atePlayerX = playerCentroX - botCentroX;
-        double atePlayerY = playerCentroY - botCentroY;
-        double posicaoNaRota = (atePlayerX * rotaX + atePlayerY * rotaY) / comprimentoQuadrado;
-
-        // Só considera bloqueio quando o jogador está entre o bot e seu alvo.
-        if (posicaoNaRota <= 0.0 || posicaoNaRota >= 1.0) {
-            return false;
-        }
-
-        double pontoRotaX = botCentroX + posicaoNaRota * rotaX;
-        double pontoRotaY = botCentroY + posicaoNaRota * rotaY;
-        double distanciaDaRota = Math.hypot(
-                playerCentroX - pontoRotaX,
-                playerCentroY - pontoRotaY
-        );
-        double distanciaBotPlayer = Math.hypot(atePlayerX, atePlayerY);
-
-        return distanciaDaRota < 45 && distanciaBotPlayer < 150;
+        // Mantém uma folga ao sair do desvio para não alternar de rota na quina.
+        // Sem desvio ativo, o pequeno recuo permite deslizar encostado.
+        double margem = tempoDesvioBot > 0 ? 4.0 : -0.01;
+        Rectangle2D obstaculo = new Rectangle2D.Double(
+                player.x - bot.largura - margem, player.y - bot.altura - margem,
+                player.largura + bot.largura + 2 * margem, player.altura + bot.altura + 2 * margem);
+        return obstaculo.intersectsLine(bot.x, bot.y, alvoX, alvoY);
     }
 
     private void iniciarDesvioBot() {
+        double botCentroX = cenario.linhaDireita.x + cenario.linhaDireita.largura / 2.0;
+        double playerCentroX = cenario.linhaEsquerda.x + cenario.linhaEsquerda.largura / 2.0;
         double botCentroY = cenario.linhaDireita.y + cenario.linhaDireita.altura / 2.0;
         double playerCentroY = cenario.linhaEsquerda.y + cenario.linhaEsquerda.altura / 2.0;
+        double diferencaX = botCentroX - playerCentroX;
         double diferencaY = botCentroY - playerCentroY;
+        direcaoDesvioX = 0;
+        direcaoDesvioY = 0;
+
+        if (Math.abs(diferencaY) / cenario.linhaDireita.altura
+                > Math.abs(diferencaX) / cenario.linhaDireita.largura) {
+            if (Math.abs(diferencaX) > 5) {
+                direcaoDesvioX = diferencaX > 0 ? 1 : -1;
+            } else {
+                direcaoDesvioX = bola.x + bola.tamanho / 2.0 >= playerCentroX ? 1 : -1;
+            }
+            double espacoLateral = direcaoDesvioX > 0
+                    ? DimensoesJogo.CAMPO_DIREITA - playerCentroX
+                    : playerCentroX - DimensoesJogo.CAMPO_ESQUERDA;
+            if (espacoLateral < 65) direcaoDesvioX *= -1;
+            tempoDesvioBot = 55;
+            return;
+        }
 
         if (Math.abs(diferencaY) > 10) {
             // Se já está um pouco acima ou abaixo, continua por esse lado.
             direcaoDesvioY = diferencaY > 0 ? 1 : -1;
         } else {
-            // Quando estão alinhados, escolhe o lado com mais espaço livre.
-            double espacoAcima = playerCentroY - DimensoesJogo.CAMPO_TOPO;
-            double espacoAbaixo = DimensoesJogo.CAMPO_FUNDO - playerCentroY;
-            direcaoDesvioY = espacoAbaixo >= espacoAcima ? 1 : -1;
+            // Prefere o lado da bola, desde que haja espaço para passar.
+            direcaoDesvioY = bola.y + bola.tamanho / 2.0 >= playerCentroY ? 1 : -1;
         }
 
         double margemNecessaria = 80;
@@ -642,5 +611,14 @@ public class Main extends JFrame {
         tempoDesvioBot = 55;
     }
 
-    public static void main(String[] args) { new Main().setVisible(true); }
+    private void limparTeclas() {
+        teclaW = false;
+        teclaA = false;
+        teclaS = false;
+        teclaD = false;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new Main().setVisible(true));
+    }
 }
