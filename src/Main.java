@@ -173,11 +173,14 @@ public class Main extends JFrame {
                             acumuladorMilis = 0;
                             alphaTextoTempo = 0.25f;
 
-                            bola.x = DimensoesJogo.BOLA_INICIAL_X;
-                            bola.y = DimensoesJogo.BOLA_INICIAL_Y;
-                            bola.velX = 0;
-                            bola.velY = 0;
+                            cenario.reposicionarParaSaida();
+                            encerrarJogadaAposGol();
                             sortearNovoPlanoBot();
+                            cenario.atualizarCronometro(periodoAtual, minutosVirtuais,
+                                    segundosVirtuais, false);
+                            cenario.atualizarTextoFade(periodoAtual, alphaTextoTempo);
+                            cenario.repaint();
+                            return;
                         } else if (periodoAtual == 2) {
                             fimDeJogo = true;
                         }

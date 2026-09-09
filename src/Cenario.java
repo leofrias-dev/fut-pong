@@ -240,6 +240,12 @@ public class Cenario extends JPanel {
         desenharAuraBot = false;
     }
 
+    // Recomeça uma etapa sem alterar o placar da partida.
+    public void reposicionarParaSaida() {
+        resetarBola();
+        repaint();
+    }
+
     private void centralizarJogadoresNoMeio() {
         Jogador[] jogadores = {goleiroEsquerda, linhaEsquerda, goleiroDireita, linhaDireita};
         for (Jogador jogador : jogadores) {
