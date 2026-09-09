@@ -6,6 +6,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Rectangle2D;
+import java.util.Random;
 
 
 public class Main extends JFrame {
@@ -34,6 +35,13 @@ public class Main extends JFrame {
     private int direcaoDesvioX = 0;
     private int direcaoDesvioY = 0;
     private int tempoRecuoParedeBot = 0;
+
+    // Cada plano permanece por alguns segundos. Isso cria variedade sem
+    // transformar o movimento do bot em uma sequência de decisões aleatórias.
+    private final Random sorteioPartida = new Random();
+    private boolean partidaPreparada = false;
+    private double deslocamentoAtaqueBotY = 0;
+    private int framesRestantesPlanoBot = 0;
 
     private int periodoAtual = 1;
     private int minutosVirtuais = 0;
@@ -108,12 +116,26 @@ public class Main extends JFrame {
         });
 
         timer = new Timer(16, e -> {
+            if (!cenario.jogoRodando()) {
+                partidaPreparada = false;
+            }
+
             // Congela física, IA, relógio, pisões e contagem do fim de jogo.
             if (cenario.isPausado()) return;
+            if (cenario.jogoRodando() && !partidaPreparada) {
+                prepararNovaPartida();
+                partidaPreparada = true;
+            }
             if (cenario.jogoRodando()) {
 
                 // Se o jogo NÃO acabou, roda a física normalmente
                 if (!fimDeJogo) {
+                    if (framesRestantesPlanoBot > 0) {
+                        framesRestantesPlanoBot--;
+                    } else {
+                        sortearNovoPlanoBot();
+                    }
+
                     int golsAntesDaFisica = cenario.golsP1 + cenario.golsBot;
                     if (fisicaJogo.atualizar()) {
                         tempoRecuoParedeBot = 35;
@@ -122,6 +144,7 @@ public class Main extends JFrame {
                         // A saída de bola só começa no próximo quadro. Nenhuma
                         // ação antiga do bot ou pisão atua sobre a bola resetada.
                         encerrarJogadaAposGol();
+                        sortearNovoPlanoBot();
                         cenario.atualizarCronometro(periodoAtual, minutosVirtuais, segundosVirtuais, fimDeJogo);
                         cenario.repaint();
                         return;
@@ -154,6 +177,7 @@ public class Main extends JFrame {
                             bola.y = DimensoesJogo.BOLA_INICIAL_Y;
                             bola.velX = 0;
                             bola.velY = 0;
+                            sortearNovoPlanoBot();
                         } else if (periodoAtual == 2) {
                             fimDeJogo = true;
                         }
@@ -257,6 +281,14 @@ public class Main extends JFrame {
                             DimensoesJogo.CAMPO_TOPO,
                             Math.min(DimensoesJogo.CAMPO_FUNDO - cenario.linhaDireita.altura,
                                     bola.y + bola.tamanho / 2.0 - cenario.linhaDireita.altura / 2.0)
+                    );
+
+                    // O bot aborda a bola um pouco por cima ou por baixo. O lado,
+                    // a distância e a duração desse plano mudam durante a partida.
+                    alvoBolaY = Math.max(
+                            DimensoesJogo.CAMPO_TOPO,
+                            Math.min(DimensoesJogo.CAMPO_FUNDO - cenario.linhaDireita.altura,
+                                    alvoBolaY + deslocamentoAtaqueBotY)
                     );
 
                     if (bola.velY < -2 && bola.y < 160) {
@@ -387,7 +419,7 @@ public class Main extends JFrame {
                         } else if ((!bolaNoCanto && distBotBola < 55) || distBotPlayer < 75) {
                             botChutando = true;
                             raioAuraBot = 0;
-                            cooldownChuteBot = 90;
+                            cooldownChuteBot = 75 + sorteioPartida.nextInt(36);
                             executarChuteBot();
                         }
                     }
@@ -567,6 +599,19 @@ public class Main extends JFrame {
                 passoX, passoY);
     }
 
+    private void prepararNovaPartida() {
+        sortearNovoPlanoBot();
+    }
+
+    private void sortearNovoPlanoBot() {
+        int ladoDaAbordagem = sorteioPartida.nextBoolean() ? 1 : -1;
+        deslocamentoAtaqueBotY = ladoDaAbordagem * (14 + sorteioPartida.nextInt(17));
+
+        // Entre aproximadamente 4 e 11 segundos reais antes de reconsiderar
+        // a jogada. O plano é estável o bastante para parecer intencional.
+        framesRestantesPlanoBot = 260 + sorteioPartida.nextInt(421);
+    }
+
     private boolean jogadorBloqueiaCaminhoDoBot(double alvoX, double alvoY) {
         Jogador bot = cenario.linhaDireita;
         Jogador player = cenario.linhaEsquerda;
@@ -664,6 +709,7 @@ public class Main extends JFrame {
         segundosVirtuais = 0;
         acumuladorMilis = 0;
         alphaTextoTempo = 0.25f;
+        partidaPreparada = false;
         limparTeclas();
         encerrarJogadaAposGol();
     }
