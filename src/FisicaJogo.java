@@ -15,23 +15,36 @@ public class FisicaJogo {
 
     public boolean atualizar() {
         botPrendeuBolaNaParede = false;
+        if (cenario.verificarGol()) return false;
 
         double maiorVelocidade = Math.max(Math.abs(bola.velX), Math.abs(bola.velY));
         int passosFisica = Math.max(4,
                 (int) Math.ceil(maiorVelocidade / (bola.tamanho / 3.0)));
 
         for (int passo = 0; passo < passosFisica; passo++) {
+            double xAnterior = bola.x;
+            double yAnterior = bola.y;
             bola.x += bola.velX / passosFisica;
             bola.y += bola.velY / passosFisica;
+
+            // Resolve a trave antes de validar o cruzamento. Um gol válido
+            // encerra a física imediatamente, antes de qualquer resgate da bola.
+            aplicarColisaoComTraves();
+            if (cenario.verificarGol(xAnterior, yAnterior)) return false;
 
             aplicarLimitesRetosDaBola();
             aplicarFisicaCurvaCenario();
 
             aplicarColisaoFisica(cenario.linhaEsquerda, 1.0);
+            if (cenario.verificarGol()) return false;
             aplicarColisaoFisica(cenario.goleiroEsquerda, 1.1);
+            if (cenario.verificarGol()) return false;
             aplicarColisaoFisica(cenario.goleiroDireita, 1.1);
+            if (cenario.verificarGol()) return false;
             aplicarColisaoFisica(cenario.linhaDireita, 1.0);
+            if (cenario.verificarGol()) return false;
             desprenderBolaEntreJogadores();
+            if (cenario.verificarGol()) return false;
 
             // Uma colisão com jogador pode empurrar a bola para dentro da parede.
             aplicarLimitesRetosDaBola();

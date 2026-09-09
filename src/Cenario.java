@@ -106,22 +106,35 @@ public class Cenario extends JPanel {
 
     public boolean jogoRodando() { return emPartida; }
 
-    public void verificarGol() {
-        if (!emPartida) return;
+    public boolean verificarGol() {
+        return verificarGol(bola.x, bola.y);
+    }
 
-        boolean bolaInteiraEntreAsTraves = bola.y >= DimensoesJogo.GOL_TOPO
-                && bola.y + bola.tamanho <= DimensoesJogo.GOL_FUNDO;
+    public boolean verificarGol(double xAnterior, double yAnterior) {
+        if (!emPartida) return false;
 
-        // A bola precisa atravessar a linha por completo para o gol valer.
-        if (bolaInteiraEntreAsTraves
-                && bola.x + bola.tamanho <= DimensoesJogo.CAMPO_ESQUERDA) {
-            golsBot++;
-            resetarBola();
-        } else if (bolaInteiraEntreAsTraves
-                && bola.x >= DimensoesJogo.CAMPO_DIREITA) {
-            golsP1++;
-            resetarBola();
+        // Usa a borda de trás da bola: ela precisa entrar por inteiro.
+        double limiteEsquerdo = DimensoesJogo.CAMPO_ESQUERDA - bola.tamanho;
+        boolean golDoBot = bola.x <= limiteEsquerdo;
+        boolean golDoPlayer = bola.x >= DimensoesJogo.CAMPO_DIREITA;
+        if (!golDoBot && !golDoPlayer) return false;
+
+        double linhaCruzada = golDoBot ? limiteEsquerdo : DimensoesJogo.CAMPO_DIREITA;
+        double alturaNoCruzamento = bola.y;
+        boolean cruzouNestePasso = golDoBot ? xAnterior > linhaCruzada : xAnterior < linhaCruzada;
+        if (cruzouNestePasso) {
+            // Em chutes diagonais, a posição no fim do passo pode já estar
+            // fora da altura do gol. Vale a altura no instante do cruzamento.
+            double fracaoDoPasso = (linhaCruzada - xAnterior) / (bola.x - xAnterior);
+            alturaNoCruzamento = yAnterior + (bola.y - yAnterior) * fracaoDoPasso;
         }
+        if (alturaNoCruzamento < DimensoesJogo.GOL_TOPO
+                || alturaNoCruzamento + bola.tamanho > DimensoesJogo.GOL_FUNDO) return false;
+
+        if (golDoBot) golsBot++;
+        else golsP1++;
+        resetarBola();
+        return true;
     }
 
     private void resetarBola() {

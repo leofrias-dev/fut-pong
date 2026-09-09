@@ -96,8 +96,17 @@ public class Main extends JFrame {
 
                 // Se o jogo NÃO acabou, roda a física normalmente
                 if (!fimDeJogo) {
+                    int golsAntesDaFisica = cenario.golsP1 + cenario.golsBot;
                     if (fisicaJogo.atualizar()) {
                         tempoRecuoParedeBot = 35;
+                    }
+                    if (cenario.golsP1 + cenario.golsBot > golsAntesDaFisica) {
+                        // A saída de bola só começa no próximo quadro. Nenhuma
+                        // ação antiga do bot ou pisão atua sobre a bola resetada.
+                        encerrarJogadaAposGol();
+                        cenario.atualizarCronometro(periodoAtual, minutosVirtuais, segundosVirtuais, fimDeJogo);
+                        cenario.repaint();
+                        return;
                     }
 
                     acumuladorMilis += 16 * 45;
@@ -356,8 +365,6 @@ public class Main extends JFrame {
                         }
                     }
 
-                    cenario.verificarGol();
-
                     if (pisaAtivo) {
                         raioAura += 6;
                         cenario.configurarAnimacaoAura(cenario.linhaEsquerda.x, cenario.linhaEsquerda.y, raioAura, true);
@@ -609,6 +616,18 @@ public class Main extends JFrame {
         }
 
         tempoDesvioBot = 55;
+    }
+
+    private void encerrarJogadaAposGol() {
+        pisaAtivo = false;
+        botChutando = false;
+        raioAura = 0;
+        raioAuraBot = 0;
+        cooldownChuteBot = 0;
+        tempoDesvioBot = 0;
+        direcaoDesvioX = 0;
+        direcaoDesvioY = 0;
+        tempoRecuoParedeBot = 0;
     }
 
     private void limparTeclas() {
