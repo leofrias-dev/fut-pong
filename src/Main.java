@@ -276,7 +276,7 @@ public class Main extends JFrame {
                     double velocidadeMovimentoBot = velocidadeLinhaDireita;
 
                     boolean goleiroDireitoTemPrioridade = bola.x + bola.tamanho
-                            >= DimensoesJogo.AREA_DIREITA_X - 10
+                            >= DimensoesJogo.AREA_DIREITA_X - 80
                             && bola.x <= DimensoesJogo.CAMPO_DIREITA
                             && bola.y + bola.tamanho >= DimensoesJogo.AREA_TOPO
                             && bola.y <= DimensoesJogo.AREA_TOPO + DimensoesJogo.AREA_ALTURA;
@@ -292,15 +292,18 @@ public class Main extends JFrame {
                         tempoRecuoParedeBot--;
                         tempoDesvioBot = 0;
                     } else if (goleiroDireitoTemPrioridade) {
-                        // Quando a bola está chegando à área, o jogador de linha
-                        // abre espaço para o goleiro e espera uma possível sobra.
+                        // Na defesa, o jogador de linha abre espaço antes de a bola
+                        // entrar na área. Ele também sai da mesma faixa vertical do
+                        // goleiro, evitando uma tabela infinita entre os dois.
                         alvoMovimentoX = DimensoesJogo.AREA_DIREITA_X
-                                - cenario.linhaDireita.largura - 35;
+                                - cenario.linhaDireita.largura - 90;
+                        double ladoLivreY = centroBolaY <= DimensoesJogo.CAMPO_MEIO_Y
+                                ? centroBolaY + 90
+                                : centroBolaY - 90;
                         alvoMovimentoY = Math.max(
                                 DimensoesJogo.CAMPO_TOPO,
                                 Math.min(DimensoesJogo.CAMPO_FUNDO - cenario.linhaDireita.altura,
-                                        bola.y + bola.tamanho / 2.0
-                                                - cenario.linhaDireita.altura / 2.0)
+                                        ladoLivreY - cenario.linhaDireita.altura / 2.0)
                         );
                         tempoDesvioBot = 0;
                     } else {
@@ -370,7 +373,8 @@ public class Main extends JFrame {
                         bola.velY = (bola.y < 300) ? 4.5 : -4.5;
                     }
 
-                    if (cooldownChuteBot == 0 && !botChutando) {
+                    if (cooldownChuteBot == 0 && !botChutando
+                            && !goleiroDireitoTemPrioridade) {
                         boolean botPertoDaBolaNaParede = fisicaJogo.bolaPertoDaParede(bola)
                                 && distBotBola < 65;
 
