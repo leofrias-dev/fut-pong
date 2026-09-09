@@ -16,6 +16,7 @@ public class Main extends JFrame {
     private Timer timer;
 
     private boolean teclaW, teclaA, teclaS, teclaD;
+    private boolean teclaEscPressionada;
 
     private boolean pisaAtivo = false;
     private int raioAura = 0;
@@ -55,14 +56,27 @@ public class Main extends JFrame {
         bola = new Bola();
         cenario = new Cenario(bola);
         fisicaJogo = new FisicaJogo(cenario, bola);
+        cenario.configurarAcaoMenuPausa(this::executarOpcaoPausa);
         add(cenario);
 
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
+                int c = e.getKeyCode();
+                if (c == KeyEvent.VK_ESCAPE) {
+                    // Segurar Esc não deve abrir e fechar o menu repetidamente.
+                    if (!teclaEscPressionada && cenario.jogoRodando()) alternarPausa();
+                    teclaEscPressionada = true;
+                    return;
+                }
+                if (cenario.isPausado()) {
+                    if (c == KeyEvent.VK_UP) cenario.selecionarOpcaoPausa(-1);
+                    if (c == KeyEvent.VK_DOWN) cenario.selecionarOpcaoPausa(1);
+                    if (c == KeyEvent.VK_ENTER) cenario.confirmarOpcaoPausa();
+                    return;
+                }
                 if (fimDeJogo || !cenario.jogoRodando()) return;
 
-                int c = e.getKeyCode();
                 if (c == KeyEvent.VK_W) teclaW = true;
                 if (c == KeyEvent.VK_A) teclaA = true;
                 if (c == KeyEvent.VK_S) teclaS = true;
@@ -77,6 +91,7 @@ public class Main extends JFrame {
             @Override
             public void keyReleased(KeyEvent e) {
                 int c = e.getKeyCode();
+                if (c == KeyEvent.VK_ESCAPE) teclaEscPressionada = false;
                 if (c == KeyEvent.VK_W) teclaW = false;
                 if (c == KeyEvent.VK_A) teclaA = false;
                 if (c == KeyEvent.VK_S) teclaS = false;
@@ -88,10 +103,13 @@ public class Main extends JFrame {
             @Override
             public void windowLostFocus(WindowEvent e) {
                 limparTeclas();
+                teclaEscPressionada = false;
             }
         });
 
         timer = new Timer(16, e -> {
+            // Congela física, IA, relógio, pisões e contagem do fim de jogo.
+            if (cenario.isPausado()) return;
             if (cenario.jogoRodando()) {
 
                 // Se o jogo NÃO acabou, roda a física normalmente
@@ -390,27 +408,7 @@ public class Main extends JFrame {
                     framesEsperaFimDeJogo++;
                     if (framesEsperaFimDeJogo >= 300) { // 300 frames * 16ms ~= 4.8 a 5 segundos
 
-                        // Reseta todas as variáveis do Main
-                        fimDeJogo = false;
-                        framesEsperaFimDeJogo = 0;
-                        periodoAtual = 1;
-                        minutosVirtuais = 0;
-                        segundosVirtuais = 0;
-                        acumuladorMilis = 0;
-                        alphaTextoTempo = 0.25f;
-                        limparTeclas();
-                        pisaAtivo = false;
-                        botChutando = false;
-                        raioAura = 0;
-                        raioAuraBot = 0;
-                        cooldownChuteBot = 0;
-                        tempoDesvioBot = 0;
-                        direcaoDesvioX = 0;
-                        direcaoDesvioY = 0;
-                        tempoRecuoParedeBot = 0;
-
-                        // Envia comando pro Cenário voltar pra tela de Início
-                        cenario.resetarParaMenu();
+                        voltarTelaInicial();
                     }
                 }
 
@@ -616,6 +614,49 @@ public class Main extends JFrame {
         }
 
         tempoDesvioBot = 55;
+    }
+
+    private void alternarPausa() {
+        limparTeclas();
+        cenario.definirPausado(!cenario.isPausado());
+        requestFocusInWindow();
+    }
+
+    private void executarOpcaoPausa(int opcao) {
+        if (!cenario.isPausado()) return;
+        switch (opcao) {
+            case 0:
+                alternarPausa();
+                break;
+            case 1:
+                resetarEstadoDaPartida();
+                cenario.reiniciarPartida();
+                requestFocusInWindow();
+                break;
+            case 2:
+                voltarTelaInicial();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void voltarTelaInicial() {
+        resetarEstadoDaPartida();
+        cenario.resetarParaMenu();
+        requestFocusInWindow();
+    }
+
+    private void resetarEstadoDaPartida() {
+        fimDeJogo = false;
+        framesEsperaFimDeJogo = 0;
+        periodoAtual = 1;
+        minutosVirtuais = 0;
+        segundosVirtuais = 0;
+        acumuladorMilis = 0;
+        alphaTextoTempo = 0.25f;
+        limparTeclas();
+        encerrarJogadaAposGol();
     }
 
     private void encerrarJogadaAposGol() {

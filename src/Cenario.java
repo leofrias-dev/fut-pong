@@ -1,9 +1,12 @@
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.BasicStroke;
@@ -12,6 +15,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.AlphaComposite;
 import java.awt.Composite;
 import java.awt.FontMetrics;
+import java.util.function.IntConsumer;
 
 
 public class Cenario extends JPanel {
@@ -28,6 +32,13 @@ public class Cenario extends JPanel {
     public boolean desenharAuraBot = false;
 
     private boolean emPartida = false;
+    private boolean pausado = false;
+    private int opcaoPausaSelecionada = 0;
+    private int opcaoPausaSobMouse = -1;
+    private IntConsumer acaoMenuPausa;
+    private static final String[] OPCOES_PAUSA = {
+            "Voltar ao jogo", "Recomeçar", "Voltar à tela de início"
+    };
 
     public Jogador goleiroEsquerda;
     public Jogador linhaEsquerda;
@@ -61,20 +72,48 @@ public class Cenario extends JPanel {
         this.goleiroDireita  = new Jogador(DimensoesJogo.GOLEIRO_DIREITA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "direita");
         this.linhaDireita    = new Jogador(DimensoesJogo.JOGADOR_DIREITA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "direita");
 
-        addMouseListener(new MouseAdapter() {
+        MouseAdapter mouseMenu = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) return;
+                if (pausado) {
+                    int opcao = opcaoPausaNoPonto(e.getX(), e.getY());
+                    if (opcao >= 0) {
+                        opcaoPausaSelecionada = opcao;
+                        confirmarOpcaoPausa();
+                    }
+                    return;
+                }
                 if (!emPartida) {
                     int mx = e.getX() - deslocamentoCampoX();
                     int my = e.getY() - deslocamentoCampoY();
                     if (mx >= DimensoesJogo.BOTAO_JOGAR_X && mx <= DimensoesJogo.BOTAO_JOGAR_X + DimensoesJogo.BOTAO_JOGAR_LARGURA &&
                             my >= DimensoesJogo.BOTAO_JOGAR_Y && my <= DimensoesJogo.BOTAO_JOGAR_Y + DimensoesJogo.BOTAO_JOGAR_ALTURA) {
-                        emPartida = true;
-                        repaint();
+                        reiniciarPartida();
                     }
                 }
             }
-        });
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                if (!pausado) return;
+                int opcao = opcaoPausaNoPonto(e.getX(), e.getY());
+                if (opcao == opcaoPausaSobMouse) return;
+                opcaoPausaSobMouse = opcao;
+                if (opcao >= 0) opcaoPausaSelecionada = opcao;
+                setCursor(Cursor.getPredefinedCursor(opcao >= 0
+                        ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+                repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                opcaoPausaSobMouse = -1;
+                setCursor(Cursor.getDefaultCursor());
+            }
+        };
+        addMouseListener(mouseMenu);
+        addMouseMotionListener(mouseMenu);
     }
 
     public void atualizarCronometro(int periodo, int minutos, int segundos, boolean fim) {
@@ -106,12 +145,59 @@ public class Cenario extends JPanel {
 
     public boolean jogoRodando() { return emPartida; }
 
+    public boolean isPausado() { return pausado; }
+
+    public void definirPausado(boolean pausado) {
+        this.pausado = emPartida && pausado;
+        opcaoPausaSelecionada = 0;
+        opcaoPausaSobMouse = -1;
+        setCursor(Cursor.getDefaultCursor());
+        repaint();
+    }
+
+    public void configurarAcaoMenuPausa(IntConsumer acao) {
+        this.acaoMenuPausa = acao;
+    }
+
+    public void selecionarOpcaoPausa(int deslocamento) {
+        if (!pausado) return;
+        opcaoPausaSelecionada = Math.floorMod(opcaoPausaSelecionada + deslocamento, OPCOES_PAUSA.length);
+        opcaoPausaSobMouse = -1;
+        setCursor(Cursor.getDefaultCursor());
+        repaint();
+    }
+
+    public void confirmarOpcaoPausa() {
+        if (pausado && acaoMenuPausa != null) {
+            acaoMenuPausa.accept(opcaoPausaSelecionada);
+        }
+    }
+
+    private Rectangle painelPausa() {
+        int centroY = (DimensoesJogo.CAMPO_TOPO + DimensoesJogo.CAMPO_FUNDO) / 2;
+        return new Rectangle(DimensoesJogo.CAMPO_MEIO_X - 180, centroY - 172, 360, 344);
+    }
+
+    private Rectangle botaoPausa(int opcao) {
+        Rectangle painel = painelPausa();
+        return new Rectangle(painel.x + 30, painel.y + 112 + opcao * 58, 300, 46);
+    }
+
+    private int opcaoPausaNoPonto(int telaX, int telaY) {
+        int campoX = telaX - deslocamentoCampoX();
+        int campoY = telaY - deslocamentoCampoY();
+        for (int i = 0; i < OPCOES_PAUSA.length; i++) {
+            if (botaoPausa(i).contains(campoX, campoY)) return i;
+        }
+        return -1;
+    }
+
     public boolean verificarGol() {
         return verificarGol(bola.x, bola.y);
     }
 
     public boolean verificarGol(double xAnterior, double yAnterior) {
-        if (!emPartida) return false;
+        if (!emPartida || pausado) return false;
 
         // Usa a borda de trás da bola: ela precisa entrar por inteiro.
         double limiteEsquerdo = DimensoesJogo.CAMPO_ESQUERDA - bola.tamanho;
@@ -166,6 +252,10 @@ public class Cenario extends JPanel {
             g2d.drawRect(DimensoesJogo.BOTAO_JOGAR_X, DimensoesJogo.BOTAO_JOGAR_Y, DimensoesJogo.BOTAO_JOGAR_LARGURA, DimensoesJogo.BOTAO_JOGAR_ALTURA);
             g2d.setFont(new Font("Arial", Font.BOLD, 20));
             g2d.drawString("JOGAR", 355, 312);
+            g2d.setColor(new Color(160, 171, 176));
+            g2d.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            desenharTextoCentralizado(g2d, "Durante a partida, Esc abre o menu de pausa.",
+                    DimensoesJogo.CAMPO_MEIO_X, 355);
             g2d.dispose();
             return;
         }
@@ -277,7 +367,54 @@ public class Cenario extends JPanel {
             g2d.setTransform(oldTransform);
         }
 
+        g2d.setColor(new Color(125, 138, 144));
+        g2d.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        desenharTextoCentralizado(g2d, "Esc · pausar", DimensoesJogo.CAMPO_MEIO_X,
+                DimensoesJogo.CAMPO_FUNDO + 24);
+
+        if (pausado) desenharMenuPausa(g2d);
         g2d.dispose();
+    }
+
+    private void desenharMenuPausa(Graphics2D g2d) {
+        g2d.setColor(new Color(0, 0, 0, 185));
+        g2d.fillRect(-deslocamentoCampoX(), -deslocamentoCampoY(), getWidth(), getHeight());
+
+        Rectangle painel = painelPausa();
+        int centroX = painel.x + painel.width / 2;
+        Color destaque = new Color(60, 220, 145);
+        desenharPainelPlacar(g2d, painel.x, painel.y, painel.width, painel.height,
+                new Color(17, 21, 24), destaque);
+
+        g2d.setColor(destaque);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 12));
+        desenharTextoCentralizado(g2d, "FUT PONG", centroX, painel.y + 31);
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 30));
+        desenharTextoCentralizado(g2d, "JOGO PAUSADO", centroX, painel.y + 68);
+        g2d.setColor(new Color(160, 171, 176));
+        g2d.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        desenharTextoCentralizado(g2d, "A partida continua de onde você parou.", centroX, painel.y + 91);
+
+        for (int i = 0; i < OPCOES_PAUSA.length; i++) {
+            Rectangle botao = botaoPausa(i);
+            boolean selecionado = i == opcaoPausaSelecionada;
+            desenharPainelPlacar(g2d, botao.x, botao.y, botao.width, botao.height,
+                    selecionado ? new Color(32, 57, 46) : new Color(25, 31, 35),
+                    selecionado ? destaque : new Color(58, 68, 73));
+            if (selecionado) {
+                g2d.setColor(destaque);
+                g2d.fillRoundRect(botao.x + 12, botao.y + 15, 3, 16, 3, 3);
+            }
+            g2d.setColor(selecionado ? Color.WHITE : new Color(202, 211, 215));
+            g2d.setFont(new Font("SansSerif", selecionado ? Font.BOLD : Font.PLAIN, 16));
+            desenharTextoCentralizado(g2d, OPCOES_PAUSA[i], centroX, botao.y + 29);
+        }
+
+        g2d.setColor(new Color(160, 171, 176));
+        g2d.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        desenharTextoCentralizado(g2d, "↑ ↓ selecionar   ·   Enter confirmar", centroX, painel.y + 307);
+        desenharTextoCentralizado(g2d, "Esc para continuar   ·   ou clique em uma opção", centroX, painel.y + 326);
     }
 
     private void desenharPlacar(Graphics2D g2d) {
@@ -379,12 +516,26 @@ public class Cenario extends JPanel {
         g2d.setStroke(new BasicStroke(1));
     }
 
-    // --- NOVO MÉTODO ADICIONADO AQUI ---
-    // Método chamado pelo Main quando passam os 5 segundos após o fim do jogo
+    public void reiniciarPartida() {
+        this.emPartida = true;
+        this.golsP1 = 0;
+        this.golsBot = 0;
+        definirPausado(false);
+        resetarBola();
+        atualizarCronometro(1, 0, 0, false);
+        atualizarTextoFade(1, 0.25f);
+        repaint();
+    }
+
+    // Também usado pela opção de sair da partida no menu de pausa.
     public void resetarParaMenu() {
         this.emPartida = false;
         this.golsP1 = 0;
         this.golsBot = 0;
-        resetarBola(); // Reaproveita o seu código que centraliza bola e jogadores
+        definirPausado(false);
+        resetarBola();
+        atualizarCronometro(1, 0, 0, false);
+        atualizarTextoFade(1, 0.25f);
+        repaint();
     }
 }
