@@ -14,7 +14,18 @@ public final class DimensoesJogo {
     public static final int CAMPO_LARGURA = CAMPO_DIREITA - CAMPO_ESQUERDA;
     public static final int CAMPO_ALTURA = CAMPO_FUNDO - CAMPO_TOPO;
     public static final int CAMPO_MEIO_X = 392;
+    // Calculado em tempo de execução para que a posição não fique gravada
+    // em classes antigas quando as dimensões do campo forem alteradas.
+    public static final int CAMPO_MEIO_Y = calcularMeioVerticalDoCampo();
     public static final int RAIO_CANTO = 50;
+
+    private static int calcularMeioVerticalDoCampo() {
+        return CAMPO_TOPO + CAMPO_ALTURA / 2;
+    }
+
+    public static int centralizarVerticalmente(int alturaDoObjeto) {
+        return CAMPO_MEIO_Y - alturaDoObjeto / 2;
+    }
 
     public static final int GOL_TOPO = 270;
     public static final int GOL_FUNDO = 390;
@@ -33,13 +44,13 @@ public final class DimensoesJogo {
     public static final int AREA_DIREITA_X = CAMPO_DIREITA - AREA_LARGURA;
 
     public static final int BOLA_INICIAL_X = 385;
-    public static final int BOLA_INICIAL_Y = 320;
+    public static final int BOLA_INICIAL_Y = centralizarVerticalmente(18);
 
     public static final int GOLEIRO_ESQUERDA_INICIAL_X = 30;
     public static final int GOLEIRO_DIREITA_INICIAL_X = 740;
     public static final int JOGADOR_ESQUERDA_INICIAL_X = 200;
     public static final int JOGADOR_DIREITA_INICIAL_X = 570;
-    public static final int JOGADORES_INICIAL_Y = 280;
+    public static final int JOGADORES_INICIAL_Y = centralizarVerticalmente(50);
 
     public static final int BOTAO_JOGAR_X = 312;
     public static final int BOTAO_JOGAR_Y = 280;

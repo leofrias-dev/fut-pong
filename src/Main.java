@@ -189,16 +189,19 @@ public class Main extends JFrame {
                             && bola.x <= DimensoesJogo.AREA_ESQUERDA_X + DimensoesJogo.AREA_LARGURA
                             && bola.y >= DimensoesJogo.AREA_TOPO
                             && bola.y <= DimensoesJogo.AREA_TOPO + DimensoesJogo.AREA_ALTURA);
+                    double centroBolaY = bola.y + bola.tamanho / 2.0;
+                    double centroGoleiroEsquerdoY = cenario.goleiroEsquerda.y
+                            + cenario.goleiroEsquerda.altura / 2.0;
 
                     if (bolaNaAreaEsq) {
                         if (cenario.goleiroEsquerda.x < bola.x) cenario.goleiroEsquerda.x += velocidadeGoleiro;
                         if (cenario.goleiroEsquerda.x > bola.x) cenario.goleiroEsquerda.x -= velocidadeGoleiro;
 
-                        if (bola.y > cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y += velocidadeGoleiro;
-                        else if (bola.y < cenario.goleiroEsquerda.y + 20) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
+                        if (centroBolaY > centroGoleiroEsquerdoY) cenario.goleiroEsquerda.y += velocidadeGoleiro;
+                        else if (centroBolaY < centroGoleiroEsquerdoY) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
                     } else {
-                        if (bola.y > cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y < 420) cenario.goleiroEsquerda.y += velocidadeGoleiro;
-                        else if (bola.y < cenario.goleiroEsquerda.y + 20 && cenario.goleiroEsquerda.y > 195) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
+                        if (centroBolaY > centroGoleiroEsquerdoY && cenario.goleiroEsquerda.y < 420) cenario.goleiroEsquerda.y += velocidadeGoleiro;
+                        else if (centroBolaY < centroGoleiroEsquerdoY && cenario.goleiroEsquerda.y > 195) cenario.goleiroEsquerda.y -= velocidadeGoleiro;
 
                         if (bola.x > 250) {
                             if (cenario.goleiroEsquerda.x < 80) cenario.goleiroEsquerda.x += 2;
@@ -211,16 +214,18 @@ public class Main extends JFrame {
                             && bola.x <= DimensoesJogo.CAMPO_DIREITA
                             && bola.y >= DimensoesJogo.AREA_TOPO
                             && bola.y <= DimensoesJogo.AREA_TOPO + DimensoesJogo.AREA_ALTURA);
+                    double centroGoleiroDireitoY = cenario.goleiroDireita.y
+                            + cenario.goleiroDireita.altura / 2.0;
 
                     if (bolaNaAreaDir) {
                         if (cenario.goleiroDireita.x < bola.x) cenario.goleiroDireita.x += velocidadeGoleiro;
                         if (cenario.goleiroDireita.x > bola.x) cenario.goleiroDireita.x -= velocidadeGoleiro;
 
-                        if (bola.y > cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y += velocidadeGoleiro;
-                        else if (bola.y < cenario.goleiroDireita.y + 20) cenario.goleiroDireita.y -= velocidadeGoleiro;
+                        if (centroBolaY > centroGoleiroDireitoY) cenario.goleiroDireita.y += velocidadeGoleiro;
+                        else if (centroBolaY < centroGoleiroDireitoY) cenario.goleiroDireita.y -= velocidadeGoleiro;
                     } else {
-                        if (bola.y > cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y < 420) cenario.goleiroDireita.y += velocidadeGoleiro;
-                        else if (bola.y < cenario.goleiroDireita.y + 20 && cenario.goleiroDireita.y > 195) cenario.goleiroDireita.y -= velocidadeGoleiro;
+                        if (centroBolaY > centroGoleiroDireitoY && cenario.goleiroDireita.y < 420) cenario.goleiroDireita.y += velocidadeGoleiro;
+                        else if (centroBolaY < centroGoleiroDireitoY && cenario.goleiroDireita.y > 195) cenario.goleiroDireita.y -= velocidadeGoleiro;
 
                         if (bola.x < 550) {
                             if (cenario.goleiroDireita.x > 690) cenario.goleiroDireita.x -= 2;

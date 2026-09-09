@@ -71,6 +71,7 @@ public class Cenario extends JPanel {
         this.linhaEsquerda   = new Jogador(DimensoesJogo.JOGADOR_ESQUERDA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "esquerda");
         this.goleiroDireita  = new Jogador(DimensoesJogo.GOLEIRO_DIREITA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "direita");
         this.linhaDireita    = new Jogador(DimensoesJogo.JOGADOR_DIREITA_INICIAL_X, DimensoesJogo.JOGADORES_INICIAL_Y, "direita");
+        centralizarJogadoresNoMeio();
 
         MouseAdapter mouseMenu = new MouseAdapter() {
             @Override
@@ -229,13 +230,21 @@ public class Cenario extends JPanel {
         bola.velX = 0;
         bola.velY = 0;
 
-        goleiroEsquerda.x = DimensoesJogo.GOLEIRO_ESQUERDA_INICIAL_X;  goleiroEsquerda.y = DimensoesJogo.JOGADORES_INICIAL_Y;
-        linhaEsquerda.x = DimensoesJogo.JOGADOR_ESQUERDA_INICIAL_X;    linhaEsquerda.y = DimensoesJogo.JOGADORES_INICIAL_Y;
-        goleiroDireita.x = DimensoesJogo.GOLEIRO_DIREITA_INICIAL_X;    goleiroDireita.y = DimensoesJogo.JOGADORES_INICIAL_Y;
-        linhaDireita.x = DimensoesJogo.JOGADOR_DIREITA_INICIAL_X;      linhaDireita.y = DimensoesJogo.JOGADORES_INICIAL_Y;
+        goleiroEsquerda.x = DimensoesJogo.GOLEIRO_ESQUERDA_INICIAL_X;
+        linhaEsquerda.x = DimensoesJogo.JOGADOR_ESQUERDA_INICIAL_X;
+        goleiroDireita.x = DimensoesJogo.GOLEIRO_DIREITA_INICIAL_X;
+        linhaDireita.x = DimensoesJogo.JOGADOR_DIREITA_INICIAL_X;
+        centralizarJogadoresNoMeio();
 
         desenharAura = false;
         desenharAuraBot = false;
+    }
+
+    private void centralizarJogadoresNoMeio() {
+        Jogador[] jogadores = {goleiroEsquerda, linhaEsquerda, goleiroDireita, linhaDireita};
+        for (Jogador jogador : jogadores) {
+            jogador.y = DimensoesJogo.centralizarVerticalmente(jogador.altura);
+        }
     }
 
     @Override
